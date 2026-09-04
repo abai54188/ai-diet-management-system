@@ -1,0 +1,56 @@
+# 服务端口配置
+server:
+  port: 8080
+
+spring:
+  application:
+    name: diet-backend
+  # 数据库连接配置(数据库名/用户名/密码后续可修改)
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/diet_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    # 下划线自动映射驼峰字段
+    map-underscore-to-camel-case: true
+    # 开发阶段打印 SQL，上线后可移除
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    banner: false
+    db-config:
+      # 逻辑删除配置
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT 自定义配置
+jwt:
+  # HS256 密钥(必须不少于 32 字符，生产环境请放入环境变量)
+  secret: diet-management-jwt-secret-key-2026-please-change-in-production
+  # 令牌有效期(毫秒)，默认 24 小时
+  expire: 86400000
+  # 请求头名称
+  header: Authorization
+
+logging:
+  level:
+    com.diet: info
+# AI大模型配置(OpenAI兼容格式, 密钥可在此修改)
+ai:
+  # 是否启用本地模拟模式: true-无需真实Key即可联调整条链路(营养计算仍走本地库), 接入真实服务后改为false
+  mock: true
+  # OpenAI兼容接口地址(如 https://api.openai.com/v1 或国内中转/私有部署地址)
+  base-url: https://api.openai.com/v1
+  # API密钥(部署时替换, 生产环境建议改用环境变量)
+  api-key: sk-xxx
+  # 模型名称
+  model: gpt-4o-mini
+  # 调用超时(毫秒)
+  timeout-ms: 60000
+# 社区敏感词过滤(逗号分隔, 命中后以***替换, 可按需扩充)
+sensitive:
+  words: 违禁药品,代餐神药,包瘦,七天暴瘦,医疗广告,赌博,刷]

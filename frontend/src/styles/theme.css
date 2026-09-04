@@ -1,0 +1,256 @@
+/* ============================================================
+   AI智能饮食管理系统 — 设计令牌 (Design Tokens)
+   方向: 健康清新系 · 墨绿主色 + 暖纸背景 + 衬线标题 + 等宽数字
+   所有页面统一引用此处的 CSS 变量, 禁止再硬编码颜色
+   ============================================================ */
+
+:root {
+  /* ---------- 品牌色阶 (苔绿) ---------- */
+  --brand-50: #F2F7F3;
+  --brand-100: #E3F0E8;
+  --brand-200: #C7E1D2;
+  --brand-300: #9DC8B1;
+  --brand-400: #6AA886;
+  --brand-500: #3B8763;
+  --brand-600: #2E6E4F;
+  --brand-700: #22513C;
+  --brand-800: #173829;
+
+  /* ---------- 语义数据色 (营养可视化专用) ---------- */
+  --data-cal: #D97742;      /* 热量: 陶土橙 */
+  --data-protein: #C95850; /* 蛋白质: 暖砖红 */
+  --data-carb: #4A7FB5;    /* 碳水: 雾霭蓝 */
+  --data-fat: #D9A13B;     /* 脂肪: 蜜蜡黄 */
+  --data-fiber: #7BA05B;   /* 纤维: 橄榄绿 */
+  --data-sodium: #B0685C; /* 钠: 赭红 */
+
+  /* ---------- 中性色 (暖灰) ---------- */
+  --bg-paper: #F6F5F0;     /* 页面暖纸底 */
+  --bg-card: #FFFFFF;      /* 卡片 */
+  --bg-hover: #F2F1EA;     /* 悬浮底 */
+  --ink-900: #24312A;      /* 主文本 暖近黑 */
+  --ink-600: #5F6D64;      /* 次文本 */
+  --ink-400: #97A29A;      /* 弱文本 */
+  --line-1: #E8E6DD;       /* 分割线 */
+  --line-2: #DDDACF;       /* 强分割线 */
+
+  /* ---------- 阴影 (双层柔和) ---------- */
+  --shadow-sm: 0 1px 2px rgba(36, 49, 42, 0.04);
+  --shadow-card: 0 1px 2px rgba(36, 49, 42, 0.04), 0 6px 18px rgba(36, 49, 42, 0.05);
+  --shadow-card-hover: 0 2px 4px rgba(36, 49, 42, 0.05), 0 14px 32px rgba(36, 49, 42, 0.10);
+  --shadow-pop: 0 12px 40px rgba(23, 56, 41, 0.16);
+
+  /* ---------- 圆角 ---------- */
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+
+  /* ---------- 字体 ---------- */
+  --font-display: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  --font-mono: 'DM Mono', 'SFMono-Regular', Consolas, 'Courier New', monospace;
+  --font-body: 'PingFang SC', 'HarmonyOS Sans SC', 'MiSans', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+
+  /* ---------- 动效 ---------- */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 0.15s;
+  --dur-base: 0.25s;
+}
+
+/* ============================================================
+   Element Plus 主题覆盖 — 全组件自动换肤
+   ============================================================ */
+:root {
+  /* 主色 -> 苔绿 */
+  --el-color-primary: var(--brand-500);
+  --el-color-primary-dark-2: var(--brand-600);
+  --el-color-primary-light-3: var(--brand-400);
+  --el-color-primary-light-5: var(--brand-300);
+  --el-color-primary-light-7: var(--brand-200);
+  --el-color-primary-light-8: #DCEBE2;
+  --el-color-primary-light-9: var(--brand-100);
+
+  /* 语义色微调至暖调 */
+  --el-color-success: #4F9464;
+  --el-color-success-light-9: #EBF5EE;
+  --el-color-warning: #D9A13B;
+  --el-color-warning-light-9: #FAF3E3;
+  --el-color-danger: #C95850;
+  --el-color-danger-light-9: #FAEDEB;
+  --el-color-error: #C95850;
+  --el-color-info: #8A958D;
+  --el-color-info-light-9: #F1F2EF;
+
+  /* 中性色 -> 暖灰 */
+  --el-text-color-primary: var(--ink-900);
+  --el-text-color-regular: #3D4A42;
+  --el-text-color-secondary: var(--ink-600);
+  --el-text-color-placeholder: var(--ink-400);
+  --el-border-color: var(--line-1);
+  --el-border-color-light: var(--line-1);
+  --el-border-color-lighter: #EEEBE2;
+  --el-fill-color-light: var(--bg-hover);
+
+  /* 基础圆角与字体 */
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 999px;
+  --el-font-family: var(--font-body);
+
+  /* 弹层阴影加深 */
+  --el-box-shadow-light: var(--shadow-card);
+  --el-box-shadow: var(--shadow-card-hover);
+}
+
+/* ============================================================
+   通用组件级样式 (供各页面复用的 class)
+   ============================================================ */
+
+/* 衬线大标题 */
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--ink-900);
+  letter-spacing: 0.5px;
+}
+
+/* 卡片悬浮抬升 (签名动效: 悬浮-2px+阴影加深) */
+.card-hover {
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* 品牌头像 (替代原紫色渐变) */
+.avatar-brand {
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 等宽数字 (热量/体重等数据) */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* 统计卡片通用容器 */
+.stat-card {
+  position: relative;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 营养数据四色浅底块 (热量/蛋白/碳水/脂肪) */
+.tint-cal { background: #FDF1E9; color: #A85A2E; }
+.tint-protein { background: #FAEDEC; color: #A03F38; }
+.tint-carb { background: #EBF1F7; color: #35608C; }
+.tint-fat { background: #FAF2DE; color: #9A6E1E; }
+.tint-brand { background: var(--brand-50); color: var(--brand-700); }
+
+/* 空状态插画底色 */
+.empty-tint {
+  background: var(--brand-50);
+  border-radius: 50%;
+}
+
+/* 品牌色左右渐变文本块 */
+.brand-gradient-text {
+  background: linear-gradient(120deg, var(--brand-600), var(--brand-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ============================================================
+   路由切换入场动效 (签名动效: 淡入上移)
+   ============================================================ */
+.page-enter {
+  animation: page-in 0.32s var(--ease-out) both;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 尊重减弱动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .card-hover,
+  .card-hover:hover {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   Element Plus 细节打磨
+   ============================================================ */
+
+/* 卡片统一圆角+阴影 */
+.el-card {
+  border-radius: var(--radius-md);
+  border-color: var(--line-1);
+  box-shadow: var(--shadow-card) !important;
+}
+
+.el-card__header {
+  font-weight: 600;
+  color: var(--ink-900);
+  border-bottom-color: var(--line-1);
+}
+
+/* 表格 */
+.el-table {
+  --el-table-header-bg-color: var(--bg-paper);
+  --el-table-header-text-color: var(--ink-600);
+  --el-table-border-color: var(--line-1);
+  --el-table-row-hover-bg-color: var(--brand-50);
+  border-radius: var(--radius-sm);
+}
+
+.el-table th.el-table__cell {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* 标签: 圆角药丸 */
+.el-tag {
+  border-radius: 999px;
+  border-color: transparent;
+}
+
+.el-tag--plain {
+  border-color: currentColor;
+}
+
+/* 对话框圆角 */
+.el-dialog {
+  border-radius: var(--radius-lg);
+}
+
+/* 分页激活态 */
+.el-pagination.is-background .el-pager li.is-active {
+  background: var(--brand-500);
+  color: #fff;
+  border-radius: 8px;
+}
+
+/* 消息提示圆角 */
+.el-message {
+  border-radius: 10px;
+}

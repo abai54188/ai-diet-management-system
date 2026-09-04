@@ -1,0 +1,70 @@
+/* ============================================================
+   全局基础样式 — 字体加载 / 暖纸底 / 滚动条 / 焦点可达性
+   ============================================================ */
+
+/* 衬线标题 + 等宽数字 (display=swap: 失败时优雅回退系统字体) */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;900&family=DM+Mono:wght@400;500&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 暖纸底 + 右上角一抹苔绿氛围光 (替代纯色背景) */
+  background-color: var(--bg-paper);
+  background-image:
+    radial-gradient(1200px 600px at 100% 0%, rgba(59, 135, 99, 0.05), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, rgba(217, 161, 59, 0.04), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* 数字使用等宽字体 */
+.el-input-number,
+.el-statistic__number {
+  font-family: var(--font-mono);
+}
+
+/* ---------- 滚动条 (细窄暖灰) ---------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4D1C5;
+  border-radius: 8px;
+  border: 2px solid var(--bg-paper);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #BCB8A9;
+}
+
+/* ---------- 键盘可达性: 焦点环 ---------- */
+:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- 文本选区 ---------- */
+::selection {
+  background: var(--brand-200);
+  color: var(--brand-800);
+}

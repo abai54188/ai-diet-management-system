@@ -1,0 +1,16 @@
+请为用户替换一周食谱中的一道菜品。
+
+【场景】{{dayLabel}}的{{mealType}}
+【健康目标】{{healthGoal}}
+【忌口】{{allergy}}
+【需避开的菜品】{{excludeList}}
+【用餐人数】{{servings}}人
+
+【硬性要求】
+1. 生成一道新的中式菜品，不要与需避开的菜品重复
+2. 食材名称使用国内日常通用叫法，重量单位克(g)，指可食部生重
+3. 禁止输出任何热量或营养数值
+4. difficulty为1-3整数，cookingTime为整数分钟
+
+【输出格式】仅输出一个菜品JSON对象，不要输出任何其他文字或markdown标记:
+{"dishName":"菜品名称","description":"一句话简介","difficulty":2,"cookingTime":25,"steps":["步骤一"],"ingredients":[{"foodName":"食材名","weight":150}]}

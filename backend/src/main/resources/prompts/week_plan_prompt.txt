@@ -1,0 +1,17 @@
+请为用户制定周一到周日的一周三餐食谱(中式饮食习惯)。
+
+【用餐人数】{{servings}}人
+【健康目标】{{healthGoal}}
+【忌口】{{allergy}}
+
+【硬性要求】
+1. 每日三餐: breakfast早餐、lunch午餐、dinner晚餐，每餐一道菜品
+2. 一周内正餐主菜不重复，荤素搭配，符合中式烹饪习惯
+3. 食材重量按用餐人数等比放大，单位克(g)，指可食部生重
+4. 食材名称使用国内日常通用叫法
+5. 禁止输出任何热量或营养数值
+6. difficulty为1-3整数，cookingTime为整数分钟
+
+【输出格式】仅输出JSON，不要输出任何其他文字或markdown标记:
+{"days":[{"dayLabel":"周一","breakfast":{"dishName":"...","description":"...","difficulty":1,"cookingTime":15,"steps":["..."],"ingredients":[{"foodName":"...","weight":100}]},"lunch":{...同结构...},"dinner":{...同结构...}}]}
+共输出7天，dayLabel依次为周一到周日。

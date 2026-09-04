@@ -1,0 +1,17 @@
+# 依赖与构建产物
+node_modules/
+dist/
+target/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 日志与临时文件
+*.log
+.DS_Store
+
+# 环境配置(敏感信息不入库)
+*.local.yml
+application-local.yml

@@ -1,0 +1,15 @@
+请对以下中式菜品进行营养改良。
+
+【原菜品】{{dishName}}
+【原食材列表】{{ingredients}}
+【改良方向】{{direction}}
+
+【硬性要求】
+1. 保持菜品基本风味与中式烹饪方式
+2. 通过更换更健康的食材、调整用量实现改良方向
+3. 食材名称使用国内日常通用叫法，重量单位克(g)，指可食部生重
+4. 禁止输出任何热量或营养数值
+5. difficulty为1-3整数，cookingTime为整数分钟
+
+【输出格式】仅输出改良后的单个菜品JSON对象，不要输出任何其他文字或markdown标记:
+{"dishName":"改良后菜品名称","description":"改良说明","difficulty":2,"cookingTime":25,"steps":["步骤一"],"ingredients":[{"foodName":"食材名","weight":150}]}
