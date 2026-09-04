@@ -37,7 +37,7 @@ public class AiFoodServiceImpl implements AiFoodService {
 
     /** 系统提示词 */
     private static final String SYSTEM_PROMPT =
-            "你是一名中式营养配餐师，擅长将菜品拆解为具体食材组成。严格按JSON格式输出，禁止输出热量数值与JSON以外的文字。";
+            "你是一名中式营养配餐师，擅长将菜品拆解为具体食材，并对每种食材科学估算每100克的热量与三大营养素。严格按JSON格式输出，不要输出JSON以外的任何文字。";
 
     /** Prompt模板缓存 */
     private final Map<String, String> promptCache = new ConcurrentHashMap<>();
@@ -81,36 +81,74 @@ public class AiFoodServiceImpl implements AiFoodService {
             ingredients.forEach(ing -> ing.setWeight(ing.getWeight().multiply(servings)
                     .setScale(1, RoundingMode.HALF_UP)));
         }
+        // 若用户提供了总重量(g), 则按比例将全部食材缩放到该总重量(覆盖上述份数放大)
+        if (dto.getTotalWeight() != null && dto.getTotalWeight().compareTo(BigDecimal.ZERO) > 0) {
+            scaleToTotalWeight(ingredients, dto.getTotalWeight());
+        }
         if (ingredients.isEmpty()) {
             throw new BusinessException("无法解析该食物，请尝试更具体的名称(如: 番茄炒蛋、牛肉面)");
         }
-        // 本地营养库逐项计算
-        ingredients.forEach(this::fillIngredient);
-        // 汇总
-        AiFoodParseVO vo = new AiFoodParseVO();
-        vo.setFoodName(displayName);
-        vo.setIngredients(ingredients);
+        // 营养计算: 真实模式由AI直接给出每100g营养值并按重量换算; 模拟模式走本地营养库(联调用)
         BigDecimal calorie = BigDecimal.ZERO;
         BigDecimal protein = BigDecimal.ZERO;
         BigDecimal carb = BigDecimal.ZERO;
         BigDecimal fat = BigDecimal.ZERO;
         int unmatched = 0;
         for (AiIngredientVO ing : ingredients) {
-            if (Boolean.FALSE.equals(ing.getMatched())) {
-                unmatched++;
-                continue;
+            if (mock) {
+                // 模拟模式: 本地库填充营养(仅用于联调, 与真实链路一致)
+                fillIngredient(ing);
+                if (Boolean.FALSE.equals(ing.getMatched())) {
+                    unmatched++;
+                    continue;
+                }
+            } else {
+                // 真实模式: AI直接提供每100g营养 -> 按该食材实际重量换算
+                ing.setMatched(true);
+                ing.setCategory("AI估算");
+                BigDecimal factor = nvl(ing.getWeight()).divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);
+                ing.setCalorie(multiply(ing.getCalorie(), factor));
+                ing.setProtein(multiply(ing.getProtein(), factor));
+                ing.setCarbohydrate(multiply(ing.getCarbohydrate(), factor));
+                ing.setFat(multiply(ing.getFat(), factor));
             }
             calorie = calorie.add(nvl(ing.getCalorie()));
             protein = protein.add(nvl(ing.getProtein()));
             carb = carb.add(nvl(ing.getCarbohydrate()));
             fat = fat.add(nvl(ing.getFat()));
         }
+        AiFoodParseVO vo = new AiFoodParseVO();
+        vo.setFoodName(displayName);
+        vo.setIngredients(ingredients);
         vo.setTotalCalorie(calorie.setScale(1, RoundingMode.HALF_UP));
         vo.setTotalProtein(protein.setScale(1, RoundingMode.HALF_UP));
         vo.setTotalCarbohydrate(carb.setScale(1, RoundingMode.HALF_UP));
         vo.setTotalFat(fat.setScale(1, RoundingMode.HALF_UP));
         vo.setUnmatchedCount(unmatched);
         return vo;
+    }
+
+    /**
+     * 按目标总重量等比缩放全部食材:
+     * 系数 = 目标总重量 / 当前食材总重量, 每项食材 × 系数
+     * 用途: 用户输入这道菜实际吃了多少克, AI按各食材比例分配到该总重量
+     */
+    private void scaleToTotalWeight(List<AiIngredientVO> ingredients, BigDecimal targetWeight) {
+        // 当前食材总重量(忽略未设重量的项)
+        BigDecimal currentTotal = ingredients.stream()
+                .map(AiIngredientVO::getWeight)
+                .filter(w -> w != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (currentTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        // 缩放系数, 保留4位小数精度
+        BigDecimal factor = targetWeight.divide(currentTotal, 4, RoundingMode.HALF_UP);
+        ingredients.forEach(ing -> {
+            if (ing.getWeight() != null) {
+                ing.setWeight(ing.getWeight().multiply(factor).setScale(1, RoundingMode.HALF_UP));
+            }
+        });
     }
 
     /**
@@ -162,6 +200,11 @@ public class AiFoodServiceImpl implements AiFoodService {
                     AiIngredientVO ing = new AiIngredientVO();
                     ing.setFoodName(node.path("foodName").asText());
                     ing.setWeight(node.path("weight").decimalValue());
+                    // AI直接给出的每100g营养值(真实模式使用)
+                    ing.setCalorie(num(node.path("calorie")));
+                    ing.setProtein(num(node.path("protein")));
+                    ing.setCarbohydrate(num(node.path("carbohydrate")));
+                    ing.setFat(num(node.path("fat")));
                     if (StringUtils.hasText(ing.getFoodName()) && ing.getWeight() != null) {
                         list.add(ing);
                     }
@@ -171,6 +214,11 @@ public class AiFoodServiceImpl implements AiFoodService {
         } catch (Exception e) {
             throw new BusinessException("AI返回数据解析失败，请重试");
         }
+    }
+
+    /** 读取数字节点, 缺失/非法时按0处理 */
+    private BigDecimal num(JsonNode n) {
+        return (n != null && n.isNumber()) ? n.decimalValue() : BigDecimal.ZERO;
     }
 
     /**

@@ -239,6 +239,10 @@ public class HealthCalcServiceImpl implements HealthCalcService {
             calorie = calorie.add(nvl(r.getCalorie()));
             FoodNutrition food = foodMap.get(r.getFoodId());
             if (food == null) {
+                // AI整菜打卡(food_id为空): 直接累加已落库的宏量营养
+                protein = protein.add(nvl(r.getProtein()));
+                carb = carb.add(nvl(r.getCarbohydrate()));
+                fat = fat.add(nvl(r.getFat()));
                 continue;
             }
             // 换算系数 = 重量/100
@@ -331,6 +335,10 @@ public class HealthCalcServiceImpl implements HealthCalcService {
             calorie = calorie.add(nvl(r.getCalorie()));
             FoodNutrition food = foodMap.get(r.getFoodId());
             if (food == null) {
+                // AI整菜打卡(food_id为空): 直接累加已落库的宏量营养
+                protein = protein.add(nvl(r.getProtein()));
+                carb = carb.add(nvl(r.getCarbohydrate()));
+                fat = fat.add(nvl(r.getFat()));
                 continue;
             }
             BigDecimal f = r.getWeight().divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);

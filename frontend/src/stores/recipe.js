@@ -6,7 +6,9 @@ import { defineStore } from 'pinia'
  */
 export const useRecipeStore = defineStore('recipe', {
   state: () => ({
-    // 最近一次生成的食谱列表
+    // 最近一次生成的多套菜单(每套含多道菜品)
+    generatedMenus: [],
+    // 展平后的菜品列表(供改良Tab选择/购物清单兼容)
     generatedDishes: [],
     // 已加入购物清单的菜品
     shoppingDishes: [],
@@ -16,9 +18,10 @@ export const useRecipeStore = defineStore('recipe', {
     improveTarget: null
   }),
   actions: {
-    /** 设置生成结果 */
-    setGenerated(dishes) {
-      this.generatedDishes = dishes || []
+    /** 设置多套菜单生成结果(同时展平菜品供改良/购物清单使用) */
+    setGenerated(menus) {
+      this.generatedMenus = menus || []
+      this.generatedDishes = (menus || []).flatMap((m) => m.dishes || [])
     },
     /** 切换菜品加入/移出购物清单(按菜品名去重) */
     toggleShopping(dish) {

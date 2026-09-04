@@ -1,148 +1,195 @@
 <template>
   <div class="food-query-page">
-    <!-- 左侧: 搜索与收藏区 -->
-    <el-card shadow="never" class="left-panel">
-      <template #header>
-        <div class="panel-header">
-          <span>食材搜索</span>
-          <el-tag type="success" size="small">本地成分表数据</el-tag>
-        </div>
-      </template>
+  <el-card shadow="never" class="recipe-panel">
+    <template #header>
+      <div class="panel-header">
+        <span>食谱中心</span>
+      </div>
+    </template>
 
-      <!-- 搜索输入框(带联想补全) -->
-      <el-autocomplete
-        v-model="searchKeyword"
-        :fetch-suggestions="querySearch"
-        placeholder="输入食材名称，如: 鸡蛋 / 土豆 / 三文鱼"
-        clearable
-        style="width: 100%"
-        @select="handleSuggestSelect"
-      >
-        <template #default="{ item }">
-          <div class="suggest-item">
-            <span class="suggest-name">{{ item.foodName }}</span>
-            <span class="suggest-cal">{{ item.calorie }} kcal/100g</span>
+    <el-tabs v-model="recipeTab">
+      <!-- 生成食谱: 集成食材搜索 + 已选食材 + 生成结果于一体 -->
+      <el-tab-pane label="生成食谱" name="generate">
+        <div class="gen-workspace">
+          <div class="selection-area">
+            <!-- 左: 食材搜索 + 菜品快捷分析 + 收藏 -->
+            <el-card shadow="never" class="left-panel">
+              <template #header>
+                <div class="panel-header">
+                  <span>食材搜索</span>
+                  <el-tag type="success" size="small">本地成分表数据</el-tag>
+                </div>
+              </template>
+
+              <!-- 想吃的菜品快捷分析 -->
+              <div class="dish-quick">
+                <el-input v-model="dishQuick" placeholder="输入想吃的菜品，如: 宫保鸡丁" clearable
+                  @keyup.enter="analyzeQuick" />
+                <el-button type="primary" :loading="dishAnalyzing" @click="analyzeQuick">分析</el-button>
+              </div>
+
+              <!-- 搜索输入框(带联想补全) -->
+              <el-autocomplete
+                v-model="searchKeyword"
+                :fetch-suggestions="querySearch"
+                placeholder="输入食材名称，如: 鸡蛋 / 土豆 / 三文鱼"
+                clearable
+                style="width: 100%"
+                @select="handleSuggestSelect"
+              >
+                <template #default="{ item }">
+                  <div class="suggest-item">
+                    <span class="suggest-name">{{ item.foodName }}</span>
+                    <span class="suggest-cal">{{ item.calorie }} kcal/100g</span>
+                  </div>
+                </template>
+              </el-autocomplete>
+
+              <!-- 分类快捷筛选 -->
+              <div class="category-tags">
+                <el-tag
+                  v-for="cat in categories"
+                  :key="cat"
+                  :type="activeCategory === cat ? 'primary' : 'info'"
+                  :effect="activeCategory === cat ? 'dark' : 'plain'"
+                  class="cat-tag"
+                  @click="toggleCategory(cat)"
+                >
+                  {{ cat }}
+                </el-tag>
+              </div>
+
+              <!-- 搜索结果列表 -->
+              <el-table :data="searchResults" v-loading="searchLoading" size="small" height="300"
+                empty-text="输入关键词或选择分类查看食材">
+                <el-table-column prop="foodName" label="食材" min-width="110" show-overflow-tooltip />
+                <el-table-column prop="category" label="分类" width="85" />
+                <el-table-column label="热量" width="95" align="center">
+                  <template #default="{ row }">
+                    <span class="cal-text">{{ row.calorie }}</span>
+                    <span class="unit"> kcal</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="60" align="center">
+                  <template #default="{ row }">
+                    <el-button type="primary" link size="small" @click="openAddDialog(row)">添加</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+
+              <!-- 搜索分页 -->
+              <el-pagination
+                v-model:current-page="searchPage.current"
+                :page-size="searchPage.size"
+                :total="searchPage.total"
+                layout="total, prev, pager, next"
+                small
+                class="search-pagination"
+                @current-change="handleSearch"
+              />
+
+              <!-- 收藏夹 -->
+              <el-divider content-position="left">
+                <el-icon><Star /></el-icon> 我的收藏夹
+              </el-divider>
+              <div v-if="collectList.length === 0" class="collect-empty">
+                暂无收藏，点击食材行的星星即可收藏
+              </div>
+              <div v-else class="collect-list">
+                <div v-for="c in collectList" :key="c.id" class="collect-item">
+                  <div class="collect-info">
+                    <span class="collect-name">{{ c.foodName }}</span>
+                    <span class="collect-cal">{{ c.fixedWeight }}g / {{ (c.calorie * c.fixedWeight / 100).toFixed(1) }} kcal</span>
+                  </div>
+                  <div class="collect-actions">
+                    <el-button type="primary" link size="small" @click="addFromCollect(c)">添加</el-button>
+                    <el-button type="danger" link size="small" @click="removeCollect(c)">删除</el-button>
+                  </div>
+                </div>
+              </div>
+            </el-card>
+
+            <!-- 右: 已选食材与营养汇总 -->
+            <el-card shadow="never" class="right-panel">
+              <template #header>
+                <div class="panel-header">
+                  <span>已选食材（{{ selectedItems.length }}项）</span>
+                  <div>
+                    <el-button v-if="selectedItems.length" type="primary" size="small" @click="goGenerate">
+                      用这些食材生成食谱
+                    </el-button>
+                    <el-button v-if="selectedItems.length" type="danger" link size="small" @click="clearAll">
+                      清空列表
+                    </el-button>
+                  </div>
+                </div>
+              </template>
+
+              <!-- 操作提示 -->
+              <el-alert v-if="!selectedItems.length" type="info" :closable="false" class="empty-tip"
+                title="在左侧搜索并添加食材，然后在下方选择生成条件，点击「生成食谱」即可由 AI 自动生成多套菜单" />
+
+              <!-- 汇总统计卡片 -->
+              <div class="summary-cards">
+                <div class="summary-card cal">
+                  <div class="summary-value">{{ calculateResult.totalCalorie ?? '0.0' }}</div>
+                  <div class="summary-label">总热量(kcal)</div>
+                </div>
+                <div class="summary-card protein">
+                  <div class="summary-value">{{ calculateResult.totalProtein ?? '0.0' }}</div>
+                  <div class="summary-label">蛋白质(g)</div>
+                </div>
+                <div class="summary-card carb">
+                  <div class="summary-value">{{ calculateResult.totalCarbohydrate ?? '0.0' }}</div>
+                  <div class="summary-label">碳水(g)</div>
+                </div>
+                <div class="summary-card fat">
+                  <div class="summary-value">{{ calculateResult.totalFat ?? '0.0' }}</div>
+                  <div class="summary-label">脂肪(g)</div>
+                </div>
+              </div>
+
+              <!-- 已选食材表格 -->
+              <el-table :data="calculateResult.items" v-loading="calculateLoading" size="small" height="360"
+                empty-text="从左侧搜索并添加食材，开始计算营养摄入">
+                <el-table-column prop="foodName" label="食材" min-width="100" show-overflow-tooltip />
+                <el-table-column label="重量(g)" width="110">
+                  <template #default="{ row }">
+                    <el-input-number v-model="row.weight" :min="1" :max="10000" :step="10" size="small"
+                      controls-position="right" style="width: 95px" @change="recalculate" />
+                  </template>
+                </el-table-column>
+                <el-table-column prop="calorie" label="热量(kcal)" width="95" align="center" />
+                <el-table-column prop="protein" label="蛋白(g)" width="80" align="center" />
+                <el-table-column prop="carbohydrate" label="碳水(g)" width="80" align="center" />
+                <el-table-column prop="fat" label="脂肪(g)" width="80" align="center" />
+                <el-table-column label="操作" width="110" align="center">
+                  <template #default="{ row }">
+                    <el-button type="primary" link size="small" @click="showDetail(row.foodId)">详情</el-button>
+                    <el-button type="warning" link size="small" @click="toggleCollect(row)">收藏</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
           </div>
-        </template>
-      </el-autocomplete>
 
-      <!-- 分类快捷筛选 -->
-      <div class="category-tags">
-        <el-tag
-          v-for="cat in categories"
-          :key="cat"
-          :type="activeCategory === cat ? 'primary' : 'info'"
-          :effect="activeCategory === cat ? 'dark' : 'plain'"
-          class="cat-tag"
-          @click="toggleCategory(cat)"
-        >
-          {{ cat }}
-        </el-tag>
-      </div>
-
-      <!-- 搜索结果列表 -->
-      <el-table :data="searchResults" v-loading="searchLoading" size="small" height="360"
-        empty-text="输入关键词或选择分类查看食材">
-        <el-table-column prop="foodName" label="食材" min-width="110" show-overflow-tooltip />
-        <el-table-column prop="category" label="分类" width="85" />
-        <el-table-column label="热量" width="95" align="center">
-          <template #default="{ row }">
-            <span class="cal-text">{{ row.calorie }}</span>
-            <span class="unit"> kcal</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="60" align="center">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="openAddDialog(row)">添加</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 搜索分页 -->
-      <el-pagination
-        v-model:current-page="searchPage.current"
-        :page-size="searchPage.size"
-        :total="searchPage.total"
-        layout="total, prev, pager, next"
-        small
-        class="search-pagination"
-        @current-change="handleSearch"
-      />
-
-      <!-- 收藏夹 -->
-      <el-divider content-position="left">
-        <el-icon><Star /></el-icon> 我的收藏夹
-      </el-divider>
-      <div v-if="collectList.length === 0" class="collect-empty">
-        暂无收藏，点击食材行的星星即可收藏
-      </div>
-      <div v-else class="collect-list">
-        <div v-for="c in collectList" :key="c.id" class="collect-item">
-          <div class="collect-info">
-            <span class="collect-name">{{ c.foodName }}</span>
-            <span class="collect-cal">{{ c.fixedWeight }}g / {{ (c.calorie * c.fixedWeight / 100).toFixed(1) }} kcal</span>
-          </div>
-          <div class="collect-actions">
-            <el-button type="primary" link size="small" @click="addFromCollect(c)">添加</el-button>
-            <el-button type="danger" link size="small" @click="removeCollect(c)">删除</el-button>
-          </div>
+          <!-- 生成结果区: 条件 + 食材注入 + 结果渲染(GenerateTab隐藏重复输入, 由上方搜索/已选驱动) -->
+          <GenerateTab :ingredients="selectedNames" :trigger="recipeTrigger" hide-input
+            @go-improve="recipeTab = 'improve'" />
         </div>
-      </div>
-    </el-card>
+      </el-tab-pane>
 
-    <!-- 右侧: 已选食材与营养汇总 -->
-    <el-card shadow="never" class="right-panel">
-      <template #header>
-        <div class="panel-header">
-          <span>已选食材（{{ selectedItems.length }}项）</span>
-          <el-button v-if="selectedItems.length" type="danger" link size="small" @click="clearAll">
-            清空列表
-          </el-button>
-        </div>
-      </template>
-
-      <!-- 汇总统计卡片 -->
-      <div class="summary-cards">
-        <div class="summary-card cal">
-          <div class="summary-value">{{ calculateResult.totalCalorie ?? '0.0' }}</div>
-          <div class="summary-label">总热量(kcal)</div>
-        </div>
-        <div class="summary-card protein">
-          <div class="summary-value">{{ calculateResult.totalProtein ?? '0.0' }}</div>
-          <div class="summary-label">蛋白质(g)</div>
-        </div>
-        <div class="summary-card carb">
-          <div class="summary-value">{{ calculateResult.totalCarbohydrate ?? '0.0' }}</div>
-          <div class="summary-label">碳水(g)</div>
-        </div>
-        <div class="summary-card fat">
-          <div class="summary-value">{{ calculateResult.totalFat ?? '0.0' }}</div>
-          <div class="summary-label">脂肪(g)</div>
-        </div>
-      </div>
-
-      <!-- 已选食材表格 -->
-      <el-table :data="calculateResult.items" v-loading="calculateLoading" size="small" height="380"
-        empty-text="从左侧搜索并添加食材，开始计算营养摄入">
-        <el-table-column prop="foodName" label="食材" min-width="100" show-overflow-tooltip />
-        <el-table-column label="重量(g)" width="110">
-          <template #default="{ row }">
-            <el-input-number v-model="row.weight" :min="1" :max="10000" :step="10" size="small"
-              controls-position="right" style="width: 95px" @change="recalculate" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="calorie" label="热量(kcal)" width="95" align="center" />
-        <el-table-column prop="protein" label="蛋白(g)" width="80" align="center" />
-        <el-table-column prop="carbohydrate" label="碳水(g)" width="80" align="center" />
-        <el-table-column prop="fat" label="脂肪(g)" width="80" align="center" />
-        <el-table-column label="操作" width="110" align="center">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="showDetail(row.foodId)">详情</el-button>
-            <el-button type="warning" link size="small" @click="toggleCollect(row)">收藏</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+      <el-tab-pane label="一周食谱规划" name="week">
+        <WeekTab />
+      </el-tab-pane>
+      <el-tab-pane label="购物清单" name="shopping">
+        <ShoppingTab />
+      </el-tab-pane>
+      <el-tab-pane label="食谱改良" name="improve">
+        <ImproveTab />
+      </el-tab-pane>
+    </el-tabs>
+  </el-card>
 
     <!-- 添加食材弹窗(设置重量) -->
     <el-dialog v-model="addDialog.visible" title="添加食材" width="360px" :close-on-click-modal="false">
@@ -196,6 +243,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   foodPageApi,
@@ -206,6 +254,12 @@ import {
   collectSaveApi,
   collectDeleteApi
 } from '@/api/food'
+import { analyzeDishApi } from '@/api/aiRecipe'
+import { useRecipeStore } from '@/stores/recipe'
+import GenerateTab from '@/views/recipe/components/GenerateTab.vue'
+import WeekTab from '@/views/recipe/components/WeekTab.vue'
+import ShoppingTab from '@/views/recipe/components/ShoppingTab.vue'
+import ImproveTab from '@/views/recipe/components/ImproveTab.vue'
 
 // 全部食材分类
 const categories = ['谷薯类', '蔬菜类', '水果类', '肉禽蛋类', '水产类', '奶豆类', '坚果类', '调料类', '饮品类', '加工食品类']
@@ -290,7 +344,7 @@ function openAddDialog(food) {
  */
 function confirmAdd() {
   const food = addDialog.food
-  selectedItems.value.push({ foodId: food.id, weight: addDialog.weight })
+  selectedItems.value.push({ foodId: food.id, foodName: food.foodName, weight: addDialog.weight })
   addDialog.visible = false
   recalculate()
 }
@@ -299,6 +353,63 @@ function confirmAdd() {
 const selectedItems = ref([])
 const calculateResult = ref({})
 const calculateLoading = ref(false)
+
+// ============ 食谱中心(合并区) ============
+// 当前激活的食谱Tab: generate / week / shopping / improve
+const recipeTab = ref('generate')
+// 触发计数: 每 +1 即让 GenerateTab 用当前已选食材重新生成
+const recipeTrigger = ref(0)
+// AI 食谱共享 store(菜品快捷分析结果写入, 由 GenerateTab 渲染)
+const recipeStore = useRecipeStore()
+
+// 想吃的菜品快捷分析
+const dishQuick = ref('')
+const dishAnalyzing = ref(false)
+
+/**
+ * 直接选菜品: AI分析热量+给做法, 结果写入共享store由GenerateTab渲染
+ */
+async function analyzeQuick() {
+  const name = dishQuick.value.trim()
+  if (!name) {
+    ElMessage.warning('请输入想吃的菜品')
+    return
+  }
+  dishAnalyzing.value = true
+  try {
+    const res = await analyzeDishApi(name)
+    const dish = res.data
+    if (!dish || !dish.ingredients) {
+      ElMessage.warning('AI 未识别该菜品，请换个更具体的名称')
+      return
+    }
+    recipeStore.setGenerated([{
+      menuName: `「${name}」热量与做法`,
+      description: dish.description || '单道菜品分析：还原食材组成、计算热量并给出详细做法',
+      dishes: [dish]
+    }])
+    ElMessage.success('分析完成')
+  } finally {
+    dishAnalyzing.value = false
+  }
+}
+
+// 已选食材名称, 供"生成食谱"Tab注入
+const selectedNames = computed(() =>
+  selectedItems.value.map((i) => i.foodName).filter(Boolean)
+)
+
+/**
+ * 用已选食材生成食谱: 切到"生成食谱"Tab 并触发自动生成
+ */
+function goGenerate() {
+  if (!selectedNames.value.length) {
+    ElMessage.warning('请先添加食材')
+    return
+  }
+  recipeTab.value = 'generate'
+  recipeTrigger.value += 1
+}
 
 /**
  * 批量计算营养摄入(每次列表变化后重新请求)
@@ -393,7 +504,7 @@ async function removeCollect(c) {
  * 一键将收藏食材按固定重量加入计算列表
  */
 function addFromCollect(c) {
-  selectedItems.value.push({ foodId: c.foodId, weight: Number(c.fixedWeight) })
+  selectedItems.value.push({ foodId: c.foodId, foodName: c.foodName, weight: Number(c.fixedWeight) })
   recalculate()
   ElMessage.success(`已添加 ${c.foodName}`)
 }
@@ -406,21 +517,52 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 页面双栏布局 */
+/* 页面布局 */
 .food-query-page {
+  margin: 0;
+}
+
+.recipe-panel {
+  width: 100%;
+}
+
+/* 食谱中心内嵌生成工作区 */
+.gen-workspace {
   display: flex;
+  flex-direction: column;
   gap: 16px;
+}
+
+.selection-area {
+  display: flex;
+  gap: 14px;
   align-items: flex-start;
 }
 
 .left-panel {
-  width: 46%;
-  min-width: 460px;
+  width: 44%;
+  min-width: 400px;
 }
 
 .right-panel {
   flex: 1;
-  min-width: 500px;
+  min-width: 420px;
+}
+
+/* 菜品快捷分析 */
+.dish-quick {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dish-quick .el-input {
+  flex: 1;
+}
+
+/* 空状态操作提示 */
+.empty-tip {
+  margin-bottom: 12px;
 }
 
 /* 面板标题 */
@@ -493,7 +635,8 @@ onMounted(() => {
 }
 
 .summary-value {
-  font-size: 26px;`n  font-family: var(--font-mono);
+  font-size: 26px;
+  font-family: var(--font-mono);
   font-weight: bold;
 }
 

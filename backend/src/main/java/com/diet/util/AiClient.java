@@ -2,12 +2,12 @@ package com.diet.util;
 
 import com.diet.common.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
+import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -20,8 +20,8 @@ import java.util.Map;
 @Component
 public class AiClient {
 
-    /** OpenAI兼容服务地址 */
-    private final RestClient restClient;
+    /** AI服务地址(不含路径) */
+    private final String endpoint;
 
     /** API密钥 */
     private final String apiKey;
@@ -29,16 +29,17 @@ public class AiClient {
     /** 模型名称 */
     private final String model;
 
+    /** 请求读超时(毫秒) */
+    private final int readTimeoutMs;
+
     public AiClient(@Value("${ai.base-url}") String baseUrl,
                     @Value("${ai.api-key}") String apiKey,
                     @Value("${ai.model}") String model,
                     @Value("${ai.timeout-ms:60000}") int timeoutMs) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000);
-        factory.setReadTimeout(timeoutMs);
-        this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
+        this.endpoint = baseUrl == null ? "" : baseUrl.trim().replaceAll("/+$", "");
         this.apiKey = apiKey;
         this.model = model;
+        this.readTimeoutMs = timeoutMs;
     }
 
     /**
@@ -66,19 +67,80 @@ public class AiClient {
                 "messages", List.of(
                         Map.of("role", "system", "content", systemPrompt),
                         Map.of("role", "user", "content", userPrompt)));
+        String url = endpoint + "/chat/completions";
+        String json = writeJson(body);
+        HttpURLConnection conn = null;
         try {
-            JsonNode resp = restClient.post()
-                    .uri("/chat/completions")
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(JsonNode.class);
-            return resp.path("choices").path(0).path("message").path("content").asText();
+            conn = (HttpURLConnection) new java.net.URL(url).openConnection();
+            conn.setRequestMethod("POST");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(readTimeoutMs);
+            // 明确声明JSON与UTF-8, 避免服务端按octet-stream处理
+            conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+            conn.setDoOutput(true);
+            byte[] reqData = json.getBytes(StandardCharsets.UTF_8);
+            // 显式指定内容长度并关闭分块, 规避Expect:100-continue等段被网络掐断
+            conn.setFixedLengthStreamingMode(reqData.length);
+            conn.getOutputStream().write(reqData);
+            conn.getOutputStream().flush();
+
+            int status = conn.getResponseCode();
+            java.io.InputStream is = (status >= 200 && status < 300)
+                    ? conn.getInputStream() : conn.getErrorStream();
+            byte[] respData = readAll(is);
+            String text = new String(respData, StandardCharsets.UTF_8);
+            if (status < 200 || status >= 300) {
+                throw new BusinessException("AI服务返回错误(" + status + "): " + truncate(text, 300));
+            }
+            JsonNode node = new ObjectMapper().readTree(text);
+            String content = node.path("choices").path(0).path("message").path("content").asText();
+            if (content.isBlank()) {
+                String tip = node.path("error").path("message").asText("");
+                throw new BusinessException("AI服务未返回内容: " + (tip.isBlank() ? truncate(text, 200) : tip));
+            }
+            return content;
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            throw new BusinessException("AI服务调用失败: " + e.getMessage());
+            throw new BusinessException("AI服务调用失败(" + url + "): " + e.getMessage());
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
+    }
+
+    /** 序列化请求体 */
+    private String writeJson(Map<String, Object> body) {
+        try {
+            return new ObjectMapper().writeValueAsString(body);
+        } catch (Exception e) {
+            throw new BusinessException("AI请求体序列化失败");
+        }
+    }
+
+    /** 读取流全部字节 */
+    private byte[] readAll(java.io.InputStream is) throws java.io.IOException {
+        if (is == null) {
+            return new byte[0];
+        }
+        try (is; java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
+            byte[] buf = new byte[4096];
+            int n;
+            while ((n = is.read(buf)) != -1) {
+                bos.write(buf, 0, n);
+            }
+            return bos.toByteArray();
+        }
+    }
+
+    /** 截断长文本便于错误提示 */
+    private String truncate(String s, int max) {
+        if (s == null) {
+            return "";
+        }
+        return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 }

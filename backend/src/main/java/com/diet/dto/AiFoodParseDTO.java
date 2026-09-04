@@ -22,4 +22,7 @@ public class AiFoodParseDTO {
 
     /** 份数(默认1份，AI按此倍数放大食材重量) */
     private BigDecimal servings;
+
+    /** 食物总重量(g, 可含小数)。提供后按比例将全部食材缩放到该总重量，覆盖servings */
+    private BigDecimal totalWeight;
 }

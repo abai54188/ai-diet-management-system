@@ -124,8 +124,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getUserInfoApi, updateProfileApi } from '@/api/auth'
-import { healthCalcApi, healthProfileApi, setMealRatioApi } from '@/api/health'
+import { getUserInfoApi } from '@/api/auth'
+import { updateProfileApi, healthCalcApi, healthProfileApi, setMealRatioApi } from '@/api/health'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()

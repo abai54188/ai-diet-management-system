@@ -37,6 +37,15 @@ public class DietRecord {
     /** 摄入热量(kcal, 按 weight 计算后落库) */
     private BigDecimal calorie;
 
+    /** 蛋白质(g, AI整菜打卡时直接落库) */
+    private BigDecimal protein;
+
+    /** 碳水(g, AI整菜打卡时直接落库) */
+    private BigDecimal carbohydrate;
+
+    /** 脂肪(g, AI整菜打卡时直接落库) */
+    private BigDecimal fat;
+
     /** 用餐时段: BREAKFAST-早餐, LUNCH-午餐, DINNER-晚餐, SNACK-加餐 */
     private String mealType;
 

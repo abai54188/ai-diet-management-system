@@ -7,54 +7,12 @@
           <template #header>
             <div class="add-header">
               <span>添加饮食记录</span>
-              <el-radio-group v-model="addMode" size="small">
-                <el-radio-button value="lib">库内搜索</el-radio-button>
-                <el-radio-button value="ai">AI识别</el-radio-button>
-              </el-radio-group>
+              <el-tag type="success" size="small" effect="plain">AI 智能分析</el-tag>
             </div>
           </template>
 
-          <!-- 模式一: 库内搜索 -->
-          <el-form v-if="addMode === 'lib'" label-width="70px">
-            <el-form-item label="选择时段">
-              <el-radio-group v-model="addForm.mealType">
-                <el-radio-button value="BREAKFAST">早餐</el-radio-button>
-                <el-radio-button value="LUNCH">午餐</el-radio-button>
-                <el-radio-button value="DINNER">晚餐</el-radio-button>
-                <el-radio-button value="SNACK">加餐</el-radio-button>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="食材">
-              <el-autocomplete
-                v-model="addForm.keyword"
-                :fetch-suggestions="querySearch"
-                placeholder="搜索食材名称"
-                style="width: 100%"
-                @select="(item) => (addForm.food = item)"
-              >
-                <template #default="{ item }">
-                  <div class="suggest-item">
-                    <span>{{ item.foodName }}</span>
-                    <span class="suggest-cal">{{ item.calorie }} kcal/100g</span>
-                  </div>
-                </template>
-              </el-autocomplete>
-            </el-form-item>
-            <el-form-item label="重量(g)">
-              <el-input-number v-model="addForm.weight" :min="1" :max="5000" :step="10" style="width: 100%" />
-            </el-form-item>
-            <el-form-item label="热量">
-              <span class="preview-cal">{{ previewCal }} kcal</span>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :disabled="!addForm.food" :loading="adding" @click="handleAdd">
-                添加记录
-              </el-button>
-            </el-form-item>
-          </el-form>
-
-          <!-- 模式二: AI智能识别 -->
-          <div v-else class="ai-mode">
+          <!-- AI智能识别(唯一模式) -->
+          <div class="ai-mode">
             <el-alert type="info" :closable="false" class="ai-tip"
               title="输入任意食物或菜品名称(如: 宫保鸡丁、牛肉面)，AI自动解析食材并按营养库计算热量" />
             <el-form label-width="70px">
@@ -74,8 +32,9 @@
                   </template>
                 </el-input>
               </el-form-item>
-              <el-form-item label="份数">
-                <el-input-number v-model="aiForm.servings" :min="0.5" :max="10" :step="0.5" :precision="1" />
+              <el-form-item label="吃完重量">
+                <el-input-number v-model="aiForm.totalWeight" :min="1" :max="5000" :step="10" style="width: 100%" />
+                <div class="weight-tip">这道菜实际吃了多少克，AI 按比例分配到各食材</div>
               </el-form-item>
             </el-form>
 
@@ -185,7 +144,12 @@
             <el-table-column label="重量" width="90" align="center">
               <template #default="{ row }">{{ row.weight }}g</template>
             </el-table-column>
-            <el-table-column prop="calorie" label="热量(kcal)" width="100" align="center" />
+            <el-table-column :prop="'calorie'" label="热量(kcal)" width="105" align="center" />
+            <el-table-column label="蛋白/碳水/脂肪" width="150" align="center">
+              <template #default="{ row }">
+                {{ row.protein ?? '-' }}/{{ row.carbohydrate ?? '-' }}/{{ row.fat ?? '-' }} g
+              </template>
+            </el-table-column>
             <el-table-column label="时段" width="90" align="center">
               <template #default="{ row }">
                 <el-tag :type="mealTagType(row.mealType)" size="small">{{ mealLabel(row.mealType) }}</el-tag>
@@ -217,25 +181,21 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { foodSuggestApi } from '@/api/food'
 import { dailySummaryApi, dailyAdviceApi, dietSaveApi, dietDeleteApi, dietPageApi, aiAnalyzeFoodApi } from '@/api/health'
 
 const today = new Date().toISOString().slice(0, 10)
 
-// 添加打卡表单
-const addForm = reactive({ mealType: 'BREAKFAST', keyword: '', food: null, weight: 100 })
+// 添加打卡表单(仅保留用餐时段字段)
+const addForm = reactive({ mealType: 'BREAKFAST' })
 const adding = ref(false)
 
-// 添加模式: lib-库内搜索 / ai-AI智能识别
-const addMode = ref('ai')
-
 // AI识别表单与结果
-const aiForm = reactive({ foodName: '', servings: 1 })
+const aiForm = reactive({ foodName: '', totalWeight: 300 })
 const analyzing = ref(false)
 const aiResult = ref(null)
 
 /**
- * AI解析食物: 输入菜名, 后端AI解析食材组成并按本地营养库计算营养
+ * AI解析食物: 输入菜名+吃完重量, 后端AI解析食材组成按比例分配重量并本地计算营养
  */
 async function handleAiAnalyze() {
   const name = aiForm.foodName.trim()
@@ -243,10 +203,14 @@ async function handleAiAnalyze() {
     ElMessage.warning('请输入食物或菜品名称')
     return
   }
+  if (!aiForm.totalWeight || aiForm.totalWeight <= 0) {
+    ElMessage.warning('请输入吃完的重量(g)')
+    return
+  }
   analyzing.value = true
   aiResult.value = null
   try {
-    const res = await aiAnalyzeFoodApi({ foodName: name, servings: aiForm.servings })
+    const res = await aiAnalyzeFoodApi({ foodName: name, totalWeight: aiForm.totalWeight })
     aiResult.value = res.data
     ElMessage.success(`已解析出 ${res.data.ingredients.length} 项食材`)
   } finally {
@@ -255,29 +219,29 @@ async function handleAiAnalyze() {
 }
 
 /**
- * AI解析结果确认打卡: 逐条写入饮食记录(未匹配食材跳过并提示)
+ * AI解析结果确认打卡: 仅打卡一条"菜名记录"(用户输入的菜名+总重量+总热量), 不逐条落食材
  */
 async function handleAiAdd() {
-  const matched = aiResult.value.ingredients.filter((i) => i.matched && i.foodId)
-  if (!matched.length) {
-    ElMessage.warning('没有可打卡的已匹配食材')
+  const r = aiResult.value
+  if (!r || !r.totalCalorie) {
+    ElMessage.warning('请先进行 AI 解析')
     return
   }
   adding.value = true
   try {
-    // 逐条写入饮食记录(同一天同一时段)
-    for (const ing of matched) {
-      await dietSaveApi({
-        foodId: ing.foodId,
-        foodName: ing.foodName,
-        weight: ing.weight,
-        calorie: ing.calorie,
-        mealType: addForm.mealType,
-        recordDate: today
-      })
-    }
-    const skipped = aiResult.value.ingredients.length - matched.length
-    ElMessage.success(`已打卡 ${matched.length} 条${skipped ? `，${skipped} 项未匹配已跳过` : ''}`)
+    // 整道菜作为一条记录落库: 菜名=用户输入, 重量=实际吃完克数, 热量与宏量营养=AI解析结果
+    await dietSaveApi({
+      foodName: r.foodName,
+      weight: aiForm.totalWeight,
+      calorie: r.totalCalorie,
+      protein: r.totalProtein,
+      carbohydrate: r.totalCarbohydrate,
+      fat: r.totalFat,
+      mealType: addForm.mealType,
+      recordDate: today
+    })
+    const skipped = r.ingredients.filter((i) => !i.matched).length
+    ElMessage.success(`已打卡「${r.foodName}」${aiForm.totalWeight}g${skipped ? `（${skipped} 项食材未匹配已从热量中剔除）` : ''}`)
     aiForm.foodName = ''
     aiResult.value = null
     await refresh()
@@ -291,51 +255,6 @@ const summary = ref(null)
 const advice = ref('')
 const records = ref([])
 const recordLoading = ref(false)
-
-// 预估热量(选中食材后实时预览)
-const previewCal = computed(() =>
-  addForm.food ? ((addForm.food.calorie * addForm.weight) / 100).toFixed(1) : '0.0'
-)
-
-/**
- * 食材联想
- */
-let timer = null
-function querySearch(kw, cb) {
-  clearTimeout(timer)
-  if (!kw || !kw.trim()) {
-    cb([])
-    return
-  }
-  timer = setTimeout(async () => {
-    const res = await foodSuggestApi(kw.trim())
-    cb(res.data || [])
-  }, 300)
-}
-
-/**
- * 添加打卡记录(热量前端按本地库数据计算落库)
- */
-async function handleAdd() {
-  if (!addForm.food) return
-  adding.value = true
-  try {
-    await dietSaveApi({
-      foodId: addForm.food.id,
-      foodName: addForm.food.foodName,
-      weight: addForm.weight,
-      calorie: previewCal.value,
-      mealType: addForm.mealType,
-      recordDate: today
-    })
-    ElMessage.success(`已记录 ${addForm.food.foodName} ${addForm.weight}g`)
-    addForm.keyword = ''
-    addForm.food = null
-    await refresh()
-  } finally {
-    adding.value = false
-  }
-}
 
 /**
  * 删除记录
@@ -456,7 +375,8 @@ onMounted(refresh)
 .preview-cal {
   color: var(--data-cal);
   font-weight: bold;
-  font-size: 16px;`n  font-family: var(--font-mono);
+  font-size: 16px;
+  font-family: var(--font-mono);
 }
 
 /* 汇总小卡 */
@@ -475,7 +395,8 @@ onMounted(refresh)
 }
 
 .t-value {
-  font-size: 18px;`n  font-family: var(--font-mono);
+  font-size: 18px;
+  font-family: var(--font-mono);
   font-weight: bold;
   color: #303133;
 }
@@ -527,4 +448,11 @@ onMounted(refresh)
   padding: 12px;
   border-radius: 6px;
 }
+.weight-tip {
+  font-size: 11px;
+  color: var(--ink-400);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
 </style>

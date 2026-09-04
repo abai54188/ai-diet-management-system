@@ -41,16 +41,16 @@ logging:
     com.diet: info
 # AI大模型配置(OpenAI兼容格式, 密钥可在此修改)
 ai:
-  # 是否启用本地模拟模式: true-无需真实Key即可联调整条链路(营养计算仍走本地库), 接入真实服务后改为false
-  mock: true
-  # OpenAI兼容接口地址(如 https://api.openai.com/v1 或国内中转/私有部署地址)
-  base-url: https://api.openai.com/v1
-  # API密钥(部署时替换, 生产环境建议改用环境变量)
-  api-key: sk-xxx
-  # 模型名称
-  model: gpt-4o-mini
-  # 调用超时(毫秒)
-  timeout-ms: 60000
+  # 真实大模型模式(false)。密钥统一从环境变量 AI_API_KEY 读取, 不写入本文件
+  mock: ${AI_MOCK:false}
+  # OpenAI兼容接口地址(阿里云百炼兼容端点, 可用环境变量 AI_BASE_URL 覆盖)
+  base-url: ${AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+  # API密钥: 必须通过环境变量 AI_API_KEY 提供
+  api-key: ${AI_API_KEY:}
+  # 模型名称(可用环境变量 AI_MODEL 覆盖)
+  model: ${AI_MODEL:qwen-plus}
+  # 调用超时(毫秒) - 生成多套菜单/多道菜品+详细做法较慢, 放宽到180秒
+  timeout-ms: 180000
 # 社区敏感词过滤(逗号分隔, 命中后以***替换, 可按需扩充)
 sensitive:
   words: 违禁药品,代餐神药,包瘦,七天暴瘦,医疗广告,赌博,刷]

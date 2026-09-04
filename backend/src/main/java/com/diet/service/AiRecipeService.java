@@ -1,9 +1,11 @@
 package com.diet.service;
 
 import com.diet.dto.AiDishVO;
+import com.diet.dto.AnalyzeDishDTO;
 import com.diet.dto.GenerateRecipeDTO;
 import com.diet.dto.ImproveRecipeDTO;
 import com.diet.dto.ImproveRecipeVO;
+import com.diet.dto.RecipeMenuVO;
 import com.diet.dto.ReplaceDishDTO;
 import com.diet.dto.ShoppingListDTO;
 import com.diet.dto.ShoppingListVO;
@@ -21,12 +23,20 @@ import java.util.List;
 public interface AiRecipeService {
 
     /**
-     * 食材匹配生成食谱(3-5套菜品)
+     * 食材匹配生成食谱(多套菜单, 每套含多道菜品, 做法详细完整)
      *
      * @param dto 食材列表+忌口/口味/菜系/健康目标约束
-     * @return 菜品列表(含本地库计算的营养值)
+     * @return 菜单列表(每道菜品含本地库计算的营养值)
      */
-    List<AiDishVO> generateRecipes(GenerateRecipeDTO dto);
+    List<RecipeMenuVO> generateRecipes(GenerateRecipeDTO dto);
+
+    /**
+     * 分析单道菜品: AI还原食材组成与详细做法, 热量/营养由本地库计算
+     *
+     * @param dto 菜品名称
+     * @return 单道菜品(含做法与营养)
+     */
+    AiDishVO analyzeDish(AnalyzeDishDTO dto);
 
     /**
      * 生成一周食谱规划(周一到周日三餐)

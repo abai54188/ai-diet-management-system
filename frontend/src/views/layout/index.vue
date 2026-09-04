@@ -25,10 +25,7 @@
           </el-menu-item>
           <div class="menu-group">营养工具</div>
           <el-menu-item index="/food/query">
-            <el-icon><Food /></el-icon><span>营养查询</span>
-          </el-menu-item>
-          <el-menu-item index="/recipe/generate">
-            <el-icon><MagicStick /></el-icon><span>食谱生成</span>
+            <el-icon><Food /></el-icon><span>营养与食谱</span>
           </el-menu-item>
           <div class="menu-group">健康管理</div>
           <el-menu-item index="/health/profile">

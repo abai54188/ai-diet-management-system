@@ -11,7 +11,8 @@ import router from '@/router'
  */
 const service = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  // 超时放宽到 120 秒: 大模型接口(识菜/问答/生成食谱)耗时长, 10秒会提前中断诱发"网络异常"
+  timeout: 120000
 })
 
 // 请求拦截器: 自动携带令牌

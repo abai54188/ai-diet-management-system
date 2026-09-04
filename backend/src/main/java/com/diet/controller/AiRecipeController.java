@@ -2,9 +2,11 @@ package com.diet.controller;
 
 import com.diet.common.Result;
 import com.diet.dto.AiDishVO;
+import com.diet.dto.AnalyzeDishDTO;
 import com.diet.dto.GenerateRecipeDTO;
 import com.diet.dto.ImproveRecipeDTO;
 import com.diet.dto.ImproveRecipeVO;
+import com.diet.dto.RecipeMenuVO;
 import com.diet.dto.ReplaceDishDTO;
 import com.diet.dto.ShoppingListDTO;
 import com.diet.dto.ShoppingListVO;
@@ -36,11 +38,19 @@ public class AiRecipeController {
     }
 
     /**
-     * 食材匹配生成食谱(支持忌口/口味/菜系/健康目标约束)
+     * 食材匹配生成食谱(多套菜单, 每套含多道菜品, 做法详细)
      */
     @PostMapping("/ai/generate")
-    public Result<List<AiDishVO>> generate(@Validated @RequestBody GenerateRecipeDTO dto) {
+    public Result<List<RecipeMenuVO>> generate(@Validated @RequestBody GenerateRecipeDTO dto) {
         return Result.success(aiRecipeService.generateRecipes(dto));
+    }
+
+    /**
+     * 分析单道菜品: AI还原食材组成+详细做法, 热量/营养由本地库计算
+     */
+    @PostMapping("/ai/analyze-dish")
+    public Result<AiDishVO> analyzeDish(@Validated @RequestBody AnalyzeDishDTO dto) {
+        return Result.success(aiRecipeService.analyzeDish(dto));
     }
 
     /**

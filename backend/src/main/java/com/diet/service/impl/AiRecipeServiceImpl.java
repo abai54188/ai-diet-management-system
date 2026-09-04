@@ -4,9 +4,11 @@ import com.diet.common.BusinessException;
 import com.diet.dto.AiDishInput;
 import com.diet.dto.AiDishVO;
 import com.diet.dto.AiIngredientVO;
+import com.diet.dto.AnalyzeDishDTO;
 import com.diet.dto.GenerateRecipeDTO;
 import com.diet.dto.ImproveRecipeDTO;
 import com.diet.dto.ImproveRecipeVO;
+import com.diet.dto.RecipeMenuVO;
 import com.diet.dto.ReplaceDishDTO;
 import com.diet.dto.ShoppingListDTO;
 import com.diet.dto.ShoppingListVO;
@@ -87,30 +89,72 @@ public class AiRecipeServiceImpl implements AiRecipeService {
     // ==================== 1. 食材匹配生成食谱 ====================
 
     @Override
-    public List<AiDishVO> generateRecipes(GenerateRecipeDTO dto) {
-        List<AiDishVO> dishes;
+    public List<RecipeMenuVO> generateRecipes(GenerateRecipeDTO dto) {
+        List<RecipeMenuVO> menus;
         if (mock) {
-            dishes = mockGenerateDishes(dto);
+            menus = mockGenerateMenus(dto);
         } else {
-            // 生成3-5套菜品
-            int count = 3 + RANDOM.nextInt(3);
+            // 生成3-4套菜单, 每套含2-3道菜品
+            int menuCount = 3 + RANDOM.nextInt(2);
+            int dishCount = 2 + RANDOM.nextInt(2);
             String userPrompt = loadPrompt("generate_recipe_prompt.txt")
-                    .replace("{{count}}", String.valueOf(count))
+                    .replace("{{menuCount}}", String.valueOf(menuCount))
+                    .replace("{{dishCount}}", String.valueOf(dishCount))
                     .replace("{{ingredients}}", String.join("、", dto.getIngredients()))
                     .replace("{{allergy}}", orDefault(dto.getAllergy()))
                     .replace("{{taste}}", orDefault(dto.getTaste()))
                     .replace("{{cuisine}}", orDefault(dto.getCuisine()))
                     .replace("{{healthGoal}}", goalText(dto.getHealthGoal()));
-            dishes = parseDishes(aiClient.chat(SYSTEM_PROMPT, userPrompt));
-            if (dishes.size() > count) {
-                dishes = new ArrayList<>(dishes.subList(0, count));
+            menus = parseMenus(aiClient.chat(SYSTEM_PROMPT, userPrompt));
+            if (menus.size() > menuCount) {
+                menus = new ArrayList<>(menus.subList(0, menuCount));
             }
         }
         // 忌口自动过滤(用户档案设置的过敏源)
-        applyAllergyFilter(dishes, effectiveAllergy(dto.getAllergy()));
-        // 营养全部本地计算(硬性约束)
-        dishes.forEach(calculator::fillDishNutrition);
-        return dishes;
+        String allergy = effectiveAllergy(dto.getAllergy());
+        for (RecipeMenuVO menu : menus) {
+            applyAllergyFilter(menu.getDishes(), allergy);
+            // 营养全部本地计算(硬性约束)
+            menu.getDishes().forEach(calculator::fillDishNutrition);
+        }
+        return menus;
+    }
+
+    @Override
+    public AiDishVO analyzeDish(AnalyzeDishDTO dto) {
+        String name = dto.getDishName() == null ? "" : dto.getDishName().trim();
+        if (name.isEmpty()) {
+            throw new BusinessException("请输入菜品名称");
+        }
+        AiDishVO dish;
+        if (mock) {
+            dish = mockAnalyzeDish(name);
+        } else {
+            String userPrompt = loadPrompt("analyze_dish_prompt.txt").replace("{{dishName}}", name);
+            dish = parseSingleDish(aiClient.chat(SYSTEM_PROMPT, userPrompt));
+            dish.setDishName(name);
+        }
+        // 还原食材营养并汇总到菜品(本地库计算)
+        calculator.fillDishNutrition(dish);
+        return dish;
+    }
+
+    /** 模拟: 分析单道菜品(本地食材库+通用做法) */
+    private AiDishVO mockAnalyzeDish(String name) {
+        Object[] main = ing("鸡胸肉", 120);
+        var food = calculator.match(name);
+        if (food != null) {
+            main = ing(food.getFoodName(), 150);
+        }
+        return dish(name,
+                "对「" + name + "」的营养分析：还原核心食材与热量，提供详细家常做法",
+                2, 25,
+                List.of("备料：将主料洗净沥干，" + main[0] + "切配处理，葱姜蒜切末", 
+                        "热锅入8g花生油，油温六成热下葱姜蒜爆香", 
+                        "下" + main[0] + "，中大火翻炒至变色断生", 
+                        "加5g生抽、3g食盐与配菜，翻炒约3分钟", 
+                        "转大火收汁，出锅装盘即可"),
+                main, ing("西兰花", 80), ing("花生油", 8), ing("食盐", 3), ing("生抽", 5));
     }
 
     // ==================== 2. 一周食谱规划 ====================
@@ -265,19 +309,23 @@ public class AiRecipeServiceImpl implements AiRecipeService {
     }
 
     /**
-     * 解析AI返回的多菜品JSON: {"dishes":[{...}]}
+     * 解析AI返回的多菜单JSON: {"menus":[{"menuName":...,"description":...,"dishes":[{...}]}]}
+     * 每套菜单含多道菜品, 菜品结构复用 AiDishVO
      */
-    private List<AiDishVO> parseDishes(String content) {
+    private List<RecipeMenuVO> parseMenus(String content) {
         try {
-            JsonNode dishes = extractJson(content).path("dishes");
-            List<AiDishVO> list = new ArrayList<>();
-            if (dishes.isArray()) {
-                for (JsonNode node : dishes) {
-                    list.add(objectMapper.treeToValue(node, AiDishVO.class));
+            JsonNode menus = extractJson(content).path("menus");
+            List<RecipeMenuVO> list = new ArrayList<>();
+            if (menus.isArray()) {
+                for (JsonNode node : menus) {
+                    RecipeMenuVO menu = objectMapper.treeToValue(node, RecipeMenuVO.class);
+                    if (menu != null && menu.getDishes() != null && !menu.getDishes().isEmpty()) {
+                        list.add(menu);
+                    }
                 }
             }
             if (list.isEmpty()) {
-                throw new BusinessException("AI未返回有效菜品数据");
+                throw new BusinessException("AI未返回有效菜单数据");
             }
             return list;
         } catch (BusinessException e) {
@@ -482,33 +530,68 @@ public class AiRecipeServiceImpl implements AiRecipeService {
         list.add(dish("家常" + p1 + "小炒" + p2,
                 "结合" + goalText(dto.getHealthGoal()) + "目标的家常小炒，营养均衡易上手",
                 2, 20,
-                List.of("食材洗净切配，控干水分", "热锅少油，大火快炒食材至断生", "调入食盐翻炒均匀即可出锅"),
+                List.of("将" + p1 + "切薄片、" + p2 + "改刀成小块，全部洗净沥干水分", 
+                        "热锅入10g花生油，油温六成热下" + p1 + "大火滑炒至变色盛出", 
+                        "锅留底油，下葱姜蒜爆香，倒入" + p2 + "中火翻炒2分钟至断生", 
+                        "回锅" + p1 + "，加3g食盐与少许清水翻炒均匀", 
+                        "转大火收汁，出锅前撒葱花即可"),
                 ing(p1, 200), ing(p2, 150), ing("花生油", 10), ing("食盐", 3)));
         list.add(dish(p1 + "营养汤品",
                 "清淡少油的炖汤做法，适合" + goalText(dto.getHealthGoal()) + "人群",
                 1, 25,
-                List.of("食材切块焯水去腥", "加足量清水大火烧开转小火炖20分钟", "出锅前食盐调味"),
+                List.of("将" + p1 + "切块，冷水下锅加姜片焯水2分钟去腥捞出", 
+                        "冬瓜去皮切块，与" + p1 + "一同放入砂锅", 
+                        "加足量清水，大火烧开后转小火加盖炖20分钟", 
+                        "出锅前加2g食盐调味，撒香菜即可"),
                 ing(p1, 120), ing("冬瓜", 150), ing("食盐", 2)));
         list.add(dish(p1 + "盖浇饭",
                 "一餐完成主食与蛋白质搭配的中式盖饭",
                 1, 15,
-                List.of("粳米蒸熟备用", "食材切片炒制，勾薄芡浇在米饭上", "撒葱花装盘"),
+                List.of("粳米淘洗后加水按1:1.2煮熟备用", 
+                        "将" + p1 + "切片、黄瓜切片，热锅滑炒至熟", 
+                        "加少许清水与淀粉勾薄芡收汁", 
+                        "把炒好的菜连带汁浇在热米饭上，撒葱花装盘"),
                 ing("粳米(标准)", 150), ing(p1, 100), ing("黄瓜", 50)));
         if (count >= 4) {
             list.add(dish("清蒸" + p1,
                     "最大限度保留食材本味与营养的低油做法",
                     1, 15,
-                    List.of("食材摆盘，铺姜丝去腥", "水开后上锅大火蒸10分钟", "淋生抽与热油激香即可"),
+                    List.of("将" + p1 + "改刀摆盘，铺姜丝去腥", 
+                            "蒸锅水烧开后上锅，大火蒸10分钟至熟透", 
+                            "取出滗去盘中汤汁，淋5g生抽", 
+                            "烧热5g花生油淋在表面激香即可"),
                     ing(p1, 250), ing("生抽", 5), ing("花生油", 5)));
         }
         if (count >= 5) {
             list.add(dish("凉拌" + p2,
                     "清爽开胃的凉拌菜，几乎不增加热量负担",
                     1, 10,
-                    List.of("食材切丝焯水过凉", "加生抽、香油拌匀", "冷藏10分钟口感更佳"),
+                    List.of("将" + p2 + "切丝，锅中水烧开焯水1分钟捞出过凉", 
+                            "沥干水分后加入5g生抽、3g香油", 
+                            "拌匀后冷藏10分钟，口感更佳"),
                     ing(p2, 200), ing("芝麻香油", 3), ing("生抽", 5)));
         }
         return list;
+    }
+
+    /** 模拟: 生成多套菜单(每套含多道菜品, 做法详细完整) */
+    private List<RecipeMenuVO> mockGenerateMenus(GenerateRecipeDTO dto) {
+        // 先生成若干道以用户食材为中心的菜品, 再分组成多套菜单
+        List<AiDishVO> dishes = mockGenerateDishes(dto);
+        List<RecipeMenuVO> menus = new ArrayList<>();
+        int perMenu = 2 + RANDOM.nextInt(2);
+        int menuIndex = 0;
+        for (int i = 0; i < dishes.size(); i += perMenu) {
+            int end = Math.min(i + perMenu, dishes.size());
+            List<AiDishVO> batch = new ArrayList<>(dishes.subList(i, end));
+            menuIndex++;
+            RecipeMenuVO menu = new RecipeMenuVO();
+            menu.setMenuName(menuIndex + "号·家常配菜定食");
+            menu.setDescription("第" + menuIndex + "套: 基于用户食材的" + goalText(dto.getHealthGoal()) + "中式家常搭配, 荤素均衡");
+            menu.setDishes(batch);
+            menus.add(menu);
+        }
+        return menus;
     }
 
     /** 模拟: 早餐模板池 */

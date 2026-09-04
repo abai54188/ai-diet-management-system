@@ -24,7 +24,7 @@ const routes = [
         path: 'food/query',
         name: 'FoodQuery',
         component: () => import('@/views/food/query.vue'),
-        meta: { title: '营养查询', requiresAuth: true }
+        meta: { title: '营养与食谱', requiresAuth: true }
       },
       {
         path: 'recipe/generate',
