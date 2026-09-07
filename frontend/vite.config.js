@@ -21,5 +21,11 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    // 一体化部署: 前端构建产物直接输出到后端 Spring Boot 的静态资源目录
+    // 打包进 jar 后由后端同一端口托管, 无需单独部署前端
+    outDir: '../backend/src/main/resources/static',
+    emptyOutDir: true
   }
 })

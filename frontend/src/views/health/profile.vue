@@ -5,7 +5,7 @@
       <el-col :span="10">
         <el-card shadow="never">
           <template #header>健康档案信息</template>
-          <el-form :model="form" label-width="90px" v-loading="loading">
+          <el-form :model="form" label-width="112px" v-loading="loading">
             <el-form-item label="身高(cm)">
               <el-input-number v-model="form.height" :min="80" :max="250" style="width: 100%" />
             </el-form-item>

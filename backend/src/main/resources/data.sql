@@ -12,16 +12,20 @@
 -- 执行方式: mysql -uroot -p < china_food_composition.sql
 -- ============================================================
 
-SET NAMES utf8mb4;
-USE diet_db;
+
+-- ============================================================
+-- 初始管理员账号(用户名: admin, 密码: admin123, 角色: ADMIN)
+-- 密码为 BCrypt 加密存储, 首次登录后请尽快修改
+-- ============================================================
+INSERT OR IGNORE INTO sys_user (username, password, nickname, role, status) VALUES
+('admin', '$2a$10$hj.2/BmzeOksWoK.Rqxe5OAMhxjD/5xjbv3Wu/FuEFqjGjGqONH..', '系统管理员', 'ADMIN', 0);
 
 -- 清空旧数据保证可重复执行
-TRUNCATE TABLE food_nutrition;
 
 -- ------------------------------------------------------------
 -- 一、谷薯类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('籼米(标准)', '籼稻米;南米;长粒米', '谷薯类', 347.0, 7.9, 77.9, 0.9, 0.6, 0.0, 0.4, 0.08, 0.04, 6.0, 0.7, 1.5, 103.0),
 ('粳米(标准)', '粳稻米;北米;短粒米', '谷薯类', 347.0, 7.7, 77.7, 0.7, 0.6, 0.0, 0.5, 0.10, 0.05, 4.0, 0.6, 1.2, 89.0),
 ('粳米(特等)', '精米;珍珠米', '谷薯类', 345.0, 6.8, 77.9, 0.6, 0.4, 0.0, 0.2, 0.05, 0.03, 3.0, 0.5, 0.9, 58.0),
@@ -115,7 +119,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 二、蔬菜类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('大白菜', '黄芽白;结球白菜;绍菜', '蔬菜类', 18.0, 1.5, 3.2, 0.1, 0.8, 31.0, 0.8, 0.04, 0.05, 50.0, 0.7, 57.5, 130.0),
 ('小白菜', '青菜;上海青;油菜(小)', '蔬菜类', 17.0, 1.5, 2.7, 0.2, 1.1, 28.0, 0.7, 0.02, 0.09, 90.0, 1.9, 73.5, 178.0),
 ('娃娃菜', '袖珍白菜;微型大白菜', '蔬菜类', 13.0, 1.0, 2.4, 0.2, 0.9, 12.0, 0.2, 0.02, 0.03, 57.0, 0.5, 40.0, 120.0),
@@ -288,7 +292,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 三、水果类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('苹果', '平安果;林檎;柰子', '水果类', 53.0, 0.2, 13.7, 0.2, 1.2, 4.0, 2.1, 0.02, 0.02, 4.0, 0.3, 2.5, 119.0),
 ('红富士苹果', '富士苹果;脆苹果', '水果类', 49.0, 0.4, 12.2, 0.2, 1.2, 3.0, 1.5, 0.02, 0.01, 5.0, 0.3, 1.5, 90.0),
 ('国光苹果', '小国光;老品种苹果', '水果类', 54.0, 0.2, 14.0, 0.2, 1.0, 4.0, 1.5, 0.02, 0.01, 6.0, 0.4, 2.0, 100.0),
@@ -411,7 +415,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 四、肉禽蛋类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('猪肉(肥瘦)', '猪肉;猪五花(肥瘦);豚肉', '肉禽蛋类', 395.0, 13.2, 2.4, 37.0, 0.0, 0.0, 0.3, 0.22, 0.16, 6.0, 1.6, 59.4, 204.0),
 ('猪肉(瘦)', '瘦肉;猪精肉;里脊(瘦)', '肉禽蛋类', 143.0, 20.3, 1.5, 6.2, 0.0, 0.0, 0.3, 0.54, 0.10, 6.0, 3.0, 57.5, 305.0),
 ('猪里脊', '通脊;小里脊;猪柳', '肉禽蛋类', 155.0, 20.2, 0.7, 7.9, 0.0, 0.0, 0.1, 0.47, 0.12, 6.0, 1.5, 43.2, 317.0),
@@ -525,7 +529,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 五、水产类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('草鱼', '鲩鱼;草棒;厚鱼', '水产类', 112.0, 16.6, 0.0, 5.2, 0.0, 0.0, 2.0, 0.04, 0.11, 38.0, 0.8, 46.0, 312.0),
 ('鲈鱼', '花鲈;四鳃鱼;寨花', '水产类', 105.0, 18.6, 0.0, 3.4, 0.0, 0.0, 0.8, 0.03, 0.17, 138.0, 2.0, 144.1, 205.0),
 ('鲤鱼', '鲤拐子;毛子;鲤子', '水产类', 109.0, 17.6, 0.4, 4.1, 0.0, 0.0, 1.3, 0.03, 0.09, 50.0, 1.0, 48.8, 334.0),
@@ -636,7 +640,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 六、奶豆类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('牛奶(全脂)', '牛乳;鲜奶;全脂纯牛奶', '奶豆类', 54.0, 3.0, 3.4, 3.2, 0.0, 1.0, 0.2, 0.03, 0.14, 104.0, 0.3, 37.2, 109.0),
 ('牛奶(低脂)', '低脂奶;半脱脂牛奶', '奶豆类', 45.0, 3.2, 4.9, 1.5, 0.0, 1.0, 0.2, 0.03, 0.13, 105.0, 0.3, 40.0, 150.0),
 ('牛奶(脱脂)', '脱脂奶;无脂牛奶', '奶豆类', 35.0, 3.4, 4.9, 0.2, 0.0, 1.0, 0.1, 0.03, 0.12, 109.0, 0.3, 42.0, 156.0),
@@ -713,7 +717,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 七、坚果类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('核桃', '胡桃;羌桃;纸皮核桃', '坚果类', 627.0, 14.9, 19.1, 58.8, 9.5, 1.0, 43.2, 0.15, 0.14, 56.0, 2.7, 6.4, 385.0),
 ('山核桃(干)', '小核桃;山核(干);碧根果(山)', '坚果类', 601.0, 8.3, 26.8, 50.4, 9.0, 0.0, 25.0, 0.20, 0.10, 57.0, 6.8, 8.3, 525.0),
 ('碧根果', '长寿果;美国山核桃;长山核桃', '坚果类', 691.0, 9.2, 13.9, 71.5, 9.6, 0.0, 15.0, 0.35, 0.10, 70.0, 3.5, 5.0, 410.0),
@@ -767,7 +771,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 八、调料类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('花生油', '落花生油;生油(粤)', '调料类', 899.0, 0.0, 0.0, 99.9, 0.0, 0.0, 42.1, 0.0, 0.0, 12.0, 2.9, 3.5, 1.0),
 ('大豆油', '豆油;黄豆油;素油', '调料类', 899.0, 0.0, 0.0, 99.9, 0.0, 0.0, 93.1, 0.0, 0.0, 13.0, 2.0, 4.5, 3.0),
 ('菜籽油', '菜油;油菜籽油;香油(川)', '调料类', 899.0, 0.0, 0.0, 99.9, 0.0, 0.0, 60.9, 0.0, 0.0, 9.0, 3.7, 5.6, 2.4),
@@ -858,7 +862,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 九、饮品类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('白开水', '凉白开;开水;饮用水', '饮品类', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.1, 1.0, 1.0),
 ('矿泉水', '天然矿泉水;饮用水(矿)', '饮品类', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20.0, 0.1, 4.0, 1.0),
 ('纯净水', '蒸馏水;反渗透水', '饮品类', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.5),
@@ -943,7 +947,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 十、加工食品类
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('方便面(油炸)', '泡面;快熟面;碗面(油炸)', '加工食品类', 472.0, 9.5, 61.0, 20.5, 2.0, 0.0, 1.5, 0.12, 0.06, 25.0, 2.0, 1144.0, 120.0),
 ('方便面(非油炸)', '干脆面(煮);拉面(非油炸)', '加工食品类', 370.0, 10.0, 70.0, 4.0, 3.0, 0.0, 1.0, 0.15, 0.08, 25.0, 2.5, 600.0, 130.0),
 ('自热米饭', '自热锅米饭;速食米饭(加热)', '加工食品类', 190.0, 3.5, 40.0, 3.0, 0.5, 0.0, 0.2, 0.04, 0.02, 8.0, 1.0, 300.0, 60.0),
@@ -1053,7 +1057,7 @@ INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carboh
 -- ------------------------------------------------------------
 -- 补充数据(使总量突破1000条)
 -- ------------------------------------------------------------
-INSERT INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
+INSERT OR IGNORE INTO food_nutrition (food_name, alias, category, calorie, protein, carbohydrate, fat, dietary_fiber, vitamin_c, vitamin_e, vitamin_b1, vitamin_b2, calcium, iron, sodium, potassium) VALUES
 ('鸡毛菜', '小青菜苗;青菜芽', '蔬菜类', 15.0, 1.7, 1.9, 0.3, 1.1, 45.0, 0.5, 0.03, 0.08, 90.0, 1.9, 73.2, 165.0),
 ('乌塌菜', '塌棵菜;黑菜;塌地菘', '蔬菜类', 25.0, 2.0, 4.0, 0.3, 1.4, 45.0, 0.6, 0.04, 0.10, 186.0, 2.4, 65.4, 234.0),
 ('结球生菜', '罗马生菜;西生菜', '蔬菜类', 16.0, 1.3, 2.1, 0.3, 1.0, 10.0, 0.3, 0.03, 0.05, 34.0, 0.8, 32.0, 170.0),

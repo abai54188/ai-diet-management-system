@@ -5,12 +5,15 @@ server:
 spring:
   application:
     name: diet-backend
-  # 数据库连接配置(数据库名/用户名/密码后续可修改)
+  # 数据库连接配置(SQLite 单文件, 免装 MySQL)
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/diet_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: 123456
+    driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:data/diet.db
+  # 首次启动自动建表并导入食材营养库种子数据
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
 
 # MyBatis-Plus 配置
 mybatis-plus:

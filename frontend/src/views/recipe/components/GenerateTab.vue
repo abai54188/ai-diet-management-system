@@ -65,7 +65,7 @@
               <el-option label="增重" value="GAIN" />
             </el-select>
           </el-form-item>
-          <el-form-item>
+          <el-form-item v-if="!hideInput">
             <el-button type="primary" :loading="loading" :disabled="!ingredientTags.length" @click="handleGenerate">
               <el-icon><MagicStick /></el-icon>&nbsp;生成食谱
             </el-button>

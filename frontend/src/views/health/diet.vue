@@ -168,7 +168,7 @@
           <template #header>
             <div class="progress-header">
               <span>AI饮食建议</span>
-              <el-tag type="success" size="small">本地数据计算</el-tag>
+              <el-tag type="success" size="small">AI 大模型生成</el-tag>
             </div>
           </template>
           <div class="advice-text">{{ advice }}</div>

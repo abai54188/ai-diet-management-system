@@ -154,19 +154,20 @@
                 empty-text="从左侧搜索并添加食材，开始计算营养摄入">
                 <el-table-column prop="foodName" label="食材" min-width="100" show-overflow-tooltip />
                 <el-table-column label="重量(g)" width="110">
-                  <template #default="{ row }">
+                  <template #default="{ row, $index }">
                     <el-input-number v-model="row.weight" :min="1" :max="10000" :step="10" size="small"
-                      controls-position="right" style="width: 95px" @change="recalculate" />
+                      controls-position="right" style="width: 95px" @change="(v) => onWeightChange($index, v)" />
                   </template>
                 </el-table-column>
                 <el-table-column prop="calorie" label="热量(kcal)" width="95" align="center" />
                 <el-table-column prop="protein" label="蛋白(g)" width="80" align="center" />
                 <el-table-column prop="carbohydrate" label="碳水(g)" width="80" align="center" />
                 <el-table-column prop="fat" label="脂肪(g)" width="80" align="center" />
-                <el-table-column label="操作" width="110" align="center">
-                  <template #default="{ row }">
+                <el-table-column label="操作" width="150" align="center">
+                  <template #default="{ row, $index }">
                     <el-button type="primary" link size="small" @click="showDetail(row.foodId)">详情</el-button>
                     <el-button type="warning" link size="small" @click="toggleCollect(row)">收藏</el-button>
+                    <el-button type="danger" link size="small" @click="removeItem($index)">删除</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -432,6 +433,24 @@ async function recalculate() {
   } finally {
     calculateLoading.value = false
   }
+}
+
+/**
+ * 调节已选食材重量: 同步回 selectedItems(计算数据源) 后重新计算
+ */
+function onWeightChange(index, val) {
+  if (selectedItems.value[index]) {
+    selectedItems.value[index].weight = val
+  }
+  recalculate()
+}
+
+/**
+ * 从已选食材列表中移除某一项(按索引)并重新计算
+ */
+function removeItem(index) {
+  selectedItems.value.splice(index, 1)
+  recalculate()
 }
 
 /**

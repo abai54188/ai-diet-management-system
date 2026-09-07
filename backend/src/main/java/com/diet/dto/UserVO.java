@@ -34,6 +34,9 @@ public class UserVO {
     /** 体重(kg) */
     private BigDecimal weight;
 
+    /** 目标体重(kg) */
+    private BigDecimal targetWeight;
+
     /** 年龄(岁) */
     private Integer age;
 

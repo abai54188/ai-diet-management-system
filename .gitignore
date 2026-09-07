@@ -3,6 +3,8 @@ node_modules/
 dist/
 target/
 docs-build/
+# 前端 build 产物(npm run build 生成到后端静态目录, 不入库)
+backend/src/main/resources/static/
 
 # IDE
 .idea/
@@ -16,3 +18,10 @@ docs-build/
 # 环境配置(敏感信息不入库)
 *.local.yml
 application-local.yml
+
+# SQLite 本地数据库文件(由 spring.sql.init 运行时自动生成, 不入库)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
