@@ -217,9 +217,21 @@ onMounted(async () => {
   height: 150px;
 }
 
-/* ---------- 速览卡 ---------- */
+/* ---------- 速览卡: 玻璃拟态 ---------- */
 .stat-row {
   margin-bottom: 16px;
+}
+
+.stat-row .stat-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.15);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--ring-highlight), var(--shadow-card) !important;
+}
+
+.stat-row .stat-card:hover {
+  box-shadow: var(--ring-highlight), var(--shadow-card-hover) !important;
 }
 
 .stat-inner {

@@ -245,10 +245,20 @@ async function handleRegister() {
   object-fit: cover;
 }
 
-/* 品牌遮罩: 底部墨绿渐变保证文字可读 */
+/* 暗角: 聚焦中心画面, 避免边缘过亮分散注意 */
+.brand-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 42%, transparent 55%, rgba(23, 56, 41, 0.22) 100%);
+  pointer-events: none;
+}
+
+/* 品牌遮罩: 底部墨绿渐变保证文字可读 (置顶于暗角层之上) */
 .brand-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

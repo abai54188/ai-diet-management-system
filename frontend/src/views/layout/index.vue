@@ -266,6 +266,7 @@ async function handleCommand(command) {
   background: var(--brand-100);
   color: var(--brand-700);
   font-weight: 600;
+  box-shadow: var(--ring-highlight), 0 1px 3px rgba(46, 110, 79, 0.10);
 }
 
 .side-menu :deep(.el-menu-item.is-active .el-icon) {

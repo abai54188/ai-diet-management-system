@@ -22,11 +22,14 @@ body {
   color: var(--ink-900);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* 暖纸底 + 右上角一抹苔绿氛围光 (替代纯色背景) */
+  /* 暖纸底 + 三团氛围光(苔绿/蜜蜡黄/青) + 极淡噪点纹理(纸张颗粒感) */
   background-color: var(--bg-paper);
   background-image:
-    radial-gradient(1200px 600px at 100% 0%, rgba(59, 135, 99, 0.05), transparent 60%),
-    radial-gradient(900px 500px at 0% 100%, rgba(217, 161, 59, 0.04), transparent 55%);
+    radial-gradient(1200px 620px at 100% 0%, rgba(59, 135, 99, 0.06), transparent 60%),
+    radial-gradient(900px 520px at 0% 100%, rgba(217, 161, 59, 0.05), transparent 55%),
+    radial-gradient(760px 420px at 50% 120%, rgba(106, 168, 134, 0.05), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  background-size: auto, auto, auto, 140px 140px;
   background-attachment: fixed;
 }
 
