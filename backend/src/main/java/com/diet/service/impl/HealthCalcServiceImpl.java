@@ -414,7 +414,7 @@ public class HealthCalcServiceImpl implements HealthCalcService {
         // 4. 高糖(碳水供能比>65%中风险)
         if (vo.getCarbEnergyRatio().compareTo(new BigDecimal("65")) >= 0) {
             risks.add(risk("SUGAR", "高糖/高碳水", 2, vo.getCarbEnergyRatio() + "%",
-                    String.format("碳水供能占比%s%%，超过推荐的50-65%上限", vo.getCarbEnergyRatio()),
+                    String.format("碳水供能占比%s%%，超过推荐的50-65%%上限", vo.getCarbEnergyRatio()),
                     "减少精米白面与含糖饮料，部分替换为杂粮与薯类"));
         }
         // 5. 膳食纤维不足(中<20g, 高不足<12g)
@@ -430,7 +430,7 @@ public class HealthCalcServiceImpl implements HealthCalcService {
         // 6. 脂肪供能比过高(>35%)
         if (vo.getFatEnergyRatio().compareTo(new BigDecimal("35")) >= 0) {
             risks.add(risk("BALANCE", "脂肪供能过高", 2, vo.getFatEnergyRatio() + "%",
-                    String.format("脂肪供能占比%s%%，超过20-30%推荐区间", vo.getFatEnergyRatio()),
+                    String.format("脂肪供能占比%s%%，超过20-30%%推荐区间", vo.getFatEnergyRatio()),
                     "减少油炸食品与肥肉，烹调油控制在25-30g/天"));
         }
         // 等级降序排序
