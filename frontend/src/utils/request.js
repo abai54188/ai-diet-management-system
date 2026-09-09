@@ -15,6 +15,9 @@ const service = axios.create({
   timeout: 120000
 })
 
+// 演示模式(GitHub Pages 静态展示): 无后端时静默请求失败, 避免满屏错误弹窗
+const demoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+
 // 请求拦截器: 自动携带令牌
 service.interceptors.request.use(
   (config) => {
@@ -36,7 +39,7 @@ service.interceptors.response.use(
       // 令牌失效: 清空登录态并跳转登录页
       if (res.code === 401) {
         handleUnauthorized()
-      } else {
+      } else if (!demoMode) {
         ElMessage.error(res.message || '请求失败')
       }
       return Promise.reject(new Error(res.message || '请求失败'))
@@ -49,12 +52,10 @@ service.interceptors.response.use(
       const { status } = error.response
       if (status === 401) {
         handleUnauthorized()
-      } else if (status === 403) {
-        ElMessage.error('无权限访问该资源')
-      } else {
-        ElMessage.error('服务器异常，请稍后重试')
+      } else if (!demoMode) {
+        ElMessage.error(status === 403 ? '无权限访问该资源' : '服务器异常，请稍后重试')
       }
-    } else {
+    } else if (!demoMode) {
       ElMessage.error('网络异常，请检查网络连接')
     }
     return Promise.reject(error)

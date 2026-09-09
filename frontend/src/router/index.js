@@ -114,12 +114,17 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // base 读取构建配置: 一体化部署为 '/', GitHub Pages 子路径部署时为 '/仓库名/'
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 
 // 全局前置守卫: 登录态校验
 router.beforeEach((to) => {
+  // 演示模式(GitHub Pages 静态展示): 跳过登录校验, 允许访客直接浏览各页面
+  if (import.meta.env.VITE_DEMO_MODE === 'true') {
+    return true
+  }
   const userStore = useUserStore()
   // 访问需要登录的页面但未登录 -> 跳转登录页
   if (to.meta.requiresAuth && !userStore.token) {

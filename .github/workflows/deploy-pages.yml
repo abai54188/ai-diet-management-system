@@ -1,0 +1,65 @@
+# GitHub Pages 静态展示部署
+# 纯前端演示模式: 跳过登录校验、静默无后端的请求报错, 仅展示页面 UI
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build (demo mode)
+        working-directory: frontend
+        env:
+          VITE_DEMO_MODE: 'true'
+        # base 设为仓库名子路径; outDir 覆盖为一体化部署目录, 输出到独立 dist
+        run: npx vite build --base=/ai-diet-management-system/ --outDir=dist --emptyOutDir
+
+      - name: SPA 404 fallback
+        # GitHub Pages 对未知路径返回 404, 复制入口为 404.html 使刷新子路径时仍能加载应用
+        run: cp frontend/dist/index.html frontend/dist/404.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
