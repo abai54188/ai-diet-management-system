@@ -1,7 +1,12 @@
 <template>
   <el-container class="layout-container">
-    <!-- 左侧导航栏 -->
-    <el-aside width="212px" class="layout-aside">
+    <!-- 移动端抽屉遮罩 -->
+    <transition name="fade">
+      <div v-if="isMobile && menuOpen" class="menu-backdrop" @click="menuOpen = false"></div>
+    </transition>
+
+    <!-- 左侧导航栏 (移动端固定定位变抽屉) -->
+    <el-aside width="212px" class="layout-aside" :class="{ 'aside-open': isMobile && menuOpen }">
       <!-- 品牌区: 叶片标记 + 名称 -->
       <div class="logo">
         <div class="logo-mark">
@@ -62,6 +67,10 @@
       <!-- 顶部用户栏 -->
       <el-header class="layout-header">
         <div class="header-left">
+          <!-- 移动端汉堡按钮 -->
+          <button v-if="isMobile" class="menu-toggle" aria-label="打开菜单" @click="menuOpen = true">
+            <el-icon :size="20"><Expand /></el-icon>
+          </button>
           <span class="header-crumb">AI 智能饮食管理系统</span>
           <span class="header-sep">/</span>
           <span class="header-title page-title">{{ pageTitle }}</span>
@@ -103,7 +112,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -111,6 +120,12 @@ import { useUserStore } from '@/stores/user'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+// ---------- 移动端适配: 视口检测 + 侧边栏抽屉开关 ----------
+const isMobile = ref(false)
+const menuOpen = ref(false)
+const mql = window.matchMedia('(max-width: 768px)')
+const syncMobile = () => { isMobile.value = mql.matches }
 
 // 当前激活菜单(与路由路径保持一致)
 const activeMenu = computed(() => route.path)
@@ -136,11 +151,20 @@ const avatarText = computed(() => {
 // 是否为管理员
 const isAdmin = computed(() => userStore.userInfo?.role === 'ADMIN')
 
-// 挂载时若无用户信息则拉取(如刷新页面后的恢复场景)
+// 挂载时若无用户信息则拉取(如刷新页面后的恢复场景); 同时监听视口变化
 onMounted(() => {
+  syncMobile()
+  mql.addEventListener('change', syncMobile)
   if (userStore.token && !userStore.userInfo) {
     userStore.refreshUserInfo()
   }
+})
+
+// 路由切换时自动关闭移动端抽屉
+watch(activeMenu, () => { menuOpen.value = false })
+
+onUnmounted(() => {
+  mql.removeEventListener('change', syncMobile)
 })
 
 /**
@@ -341,5 +365,86 @@ async function handleCommand(command) {
 .layout-main {
   background: transparent;
   padding: 20px 22px 26px;
+}
+
+/* ---------- 移动端组件: 汉堡按钮 / 抽屉遮罩 ---------- */
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-right: 6px;
+  border: 1px solid var(--line-1);
+  border-radius: 10px;
+  background: var(--bg-paper);
+  color: var(--ink-700);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.menu-toggle:active {
+  background: var(--bg-hover);
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(23, 40, 32, 0.45);
+}
+
+.menu-backdrop.fade-enter-active,
+.menu-backdrop.fade-leave-active {
+  transition: opacity var(--dur-base) ease;
+}
+
+.menu-backdrop.fade-enter-from,
+.menu-backdrop.fade-leave-to {
+  opacity: 0;
+}
+
+/* ---------- 移动端布局 (≤768px): 侧边栏变抽屉 ---------- */
+@media (max-width: 768px) {
+  .layout-aside {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 2001;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: none;
+  }
+
+  .layout-aside.aside-open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-pop);
+  }
+
+  .header-crumb,
+  .header-sep,
+  .header-date {
+    display: none;
+  }
+
+  .header-title {
+    font-size: 16px;
+  }
+
+  .header-right {
+    gap: 12px;
+  }
+
+  .user-name {
+    max-width: 84px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .layout-main {
+    padding: 12px 12px 16px;
+  }
 }
 </style>

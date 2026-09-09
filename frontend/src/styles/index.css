@@ -71,3 +71,70 @@ body {
   background: var(--brand-200);
   color: var(--brand-800);
 }
+
+/* ============================================================
+   移动端适配 (≤768px): 栅格塌缩 / 组件尺寸收紧
+   PC 端样式不受影响, 仅窄屏生效
+   ============================================================ */
+@media (max-width: 768px) {
+  /* el-col 栅格统一塌缩为整行(表单/卡片网格纵向排列) */
+  .el-col-4,
+  .el-col-5,
+  .el-col-6,
+  .el-col-7,
+  .el-col-8,
+  .el-col-9,
+  .el-col-10,
+  .el-col-12,
+  .el-col-14,
+  .el-col-16,
+  .el-col-18,
+  .el-col-20 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* 卡片内边距收紧 */
+  .el-card__body {
+    padding: 14px;
+  }
+
+  /* 弹窗宽度撑满屏(覆盖页面里写死的 px 宽度) */
+  .el-dialog {
+    width: calc(100vw - 24px) !important;
+    max-width: 94vw;
+    margin: 6vh auto 0 !important;
+  }
+
+  .el-message-box {
+    width: calc(100vw - 32px) !important;
+    max-width: 92vw;
+  }
+
+  /* 抽屉宽度上限 */
+  .el-drawer {
+    max-width: 86vw;
+  }
+
+  /* 表格单元格收紧 */
+  .el-table .el-table__cell {
+    padding: 6px 0;
+  }
+
+  /* 分页器紧凑居中 */
+  .el-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 6px;
+  }
+
+  .el-pagination .el-pagination__jump,
+  .el-pagination .el-pagination__sizes {
+    display: none;
+  }
+
+  /* 标签更窄以防溢出 */
+  .el-tag {
+    max-width: 100%;
+  }
+}

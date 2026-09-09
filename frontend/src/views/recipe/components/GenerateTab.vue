@@ -609,4 +609,32 @@ function goImprove(dish) {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* ---------- 移动端 (≤768px): 菜品卡片单列, 操作按钮铺满 ---------- */
+@media (max-width: 768px) {
+  /* 去掉340px最小宽, 单列自适应(修复卡片溢出被裁切) */
+  .dish-list {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* 折叠面板标题: 允许换行并预留折叠箭头位置, 购物按钮不再挤压菜名 */
+  .menu-title {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding-right: 26px;
+  }
+
+  /* 菜品底部操作按钮换行平铺 */
+  .dish-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .dish-actions > .el-button {
+    flex: 1;
+    min-width: 0;
+    margin-left: 0;
+  }
+}
 </style>

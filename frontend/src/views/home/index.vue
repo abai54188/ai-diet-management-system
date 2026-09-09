@@ -364,6 +364,23 @@ onMounted(async () => {
   }
 }
 
+/* ---------- 移动端: 横幅紧凑 ---------- */
+@media (max-width: 768px) {
+  .welcome-card :deep(.el-card__body) {
+    padding: 18px 16px;
+  }
+
+  .welcome-title {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  .welcome-sub {
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+}
+
 @media (max-width: 640px) {
   .quick-grid {
     grid-template-columns: repeat(2, 1fr);

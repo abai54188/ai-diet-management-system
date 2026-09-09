@@ -758,4 +758,46 @@ onMounted(() => {
   color: var(--data-cal);
   font-weight: bold;
 }
+
+/* ---------- 移动端 (≤768px): 双栏工作区纵向堆叠 ---------- */
+@media (max-width: 768px) {
+  .selection-area {
+    flex-direction: column;
+  }
+
+  .left-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .right-panel {
+    min-width: 0;
+  }
+
+  /* 汇总统计卡竖排: 一行一张, 数值居左标签居右 */
+  .summary-cards {
+    gap: 8px;
+  }
+
+  .summary-card {
+    flex: 1 1 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+  }
+
+  .summary-value {
+    font-size: 20px;
+  }
+
+  .summary-label {
+    margin-top: 0;
+  }
+
+  /* 搜索分页居中 */
+  .search-pagination {
+    justify-content: center;
+  }
+}
 </style>
