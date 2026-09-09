@@ -52,6 +52,8 @@ ai:
   api-key: ${AI_API_KEY:}
   # 模型名称(可用环境变量 AI_MODEL 覆盖)
   model: ${AI_MODEL:qwen-plus}
+  # 视觉模型名称(拍照识别专用, 需支持图片输入; 可用环境变量 AI_VISION_MODEL 覆盖)
+  vision-model: ${AI_VISION_MODEL:qwen-vl-plus}
   # 调用超时(毫秒) - 生成多套菜单/多道菜品+详细做法较慢, 放宽到180秒
   timeout-ms: 180000
 # 社区敏感词过滤(逗号分隔, 命中后以***替换, 可按需扩充)

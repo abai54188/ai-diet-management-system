@@ -42,6 +42,9 @@ export const updateProfileApi = (data) => request.put('/auth/profile', data)
 // AI解析食物营养(输入菜名, 解析食材并本地计算营养)
 export const aiAnalyzeFoodApi = (data) => request.post('/diet/ai-analyze', data)
 
+// AI拍照识别食物营养(上传照片FormData, 视觉模型识别菜品+估算重量)
+export const aiPhotoAnalyzeApi = (formData) => request.post('/diet/ai-photo-analyze', formData)
+
 // AI问答
 export const chatSendApi = (question) => request.post('/chat/send', { question })
 

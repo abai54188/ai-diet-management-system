@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -54,6 +55,153 @@ public class AiFoodServiceImpl implements AiFoodService {
         this.aiClient = aiClient;
         this.calculator = calculator;
         this.objectMapper = objectMapper;
+    }
+
+    /**
+     * 拍照识别食物: 视觉模型识别菜品+估算重量, 营养按每100g值x重量换算(与文本解析真实链路口径一致)
+     */
+    @Override
+    public AiFoodParseVO parseFoodPhoto(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new BusinessException("请上传照片");
+        }
+        List<AiIngredientVO> ingredients;
+        String dishName;
+        if (mock) {
+            // 模拟模式: 固定返回一碗米饭(本地库计算), 供无密钥环境联调整条链路
+            dishName = "米饭(蒸)";
+            ingredients = mockParse(dishName);
+            ingredients.forEach(this::fillIngredientMock);
+        } else {
+            String dataUrl = toDataUrl(image);
+            String userPrompt = loadPrompt("food_photo_prompt.txt");
+            String content = aiClient.chatVision(SYSTEM_PROMPT, userPrompt, dataUrl);
+            PhotoParseResult r = parsePhotoContent(content);
+            dishName = r.dishName;
+            ingredients = r.ingredients;
+            // 真实模式: AI给出每100g营养 -> 按各食材实际重量换算
+            ingredients.forEach(ing -> {
+                ing.setMatched(true);
+                ing.setCategory("AI估算");
+                BigDecimal factor = nvl(ing.getWeight()).divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);
+                ing.setCalorie(multiply(ing.getCalorie(), factor));
+                ing.setProtein(multiply(ing.getProtein(), factor));
+                ing.setCarbohydrate(multiply(ing.getCarbohydrate(), factor));
+                ing.setFat(multiply(ing.getFat(), factor));
+            });
+        }
+        if (ingredients.isEmpty() || !StringUtils.hasText(dishName)) {
+            throw new BusinessException("未能从照片中识别出食物，请换个角度拍摄或手动输入");
+        }
+        // 汇总营养
+        BigDecimal calorie = BigDecimal.ZERO;
+        BigDecimal protein = BigDecimal.ZERO;
+        BigDecimal carb = BigDecimal.ZERO;
+        BigDecimal fat = BigDecimal.ZERO;
+        for (AiIngredientVO ing : ingredients) {
+            calorie = calorie.add(nvl(ing.getCalorie()));
+            protein = protein.add(nvl(ing.getProtein()));
+            carb = carb.add(nvl(ing.getCarbohydrate()));
+            fat = fat.add(nvl(ing.getFat()));
+        }
+        AiFoodParseVO vo = new AiFoodParseVO();
+        vo.setFoodName(dishName);
+        vo.setIngredients(ingredients);
+        vo.setTotalCalorie(calorie.setScale(1, RoundingMode.HALF_UP));
+        vo.setTotalProtein(protein.setScale(1, RoundingMode.HALF_UP));
+        vo.setTotalCarbohydrate(carb.setScale(1, RoundingMode.HALF_UP));
+        vo.setTotalFat(fat.setScale(1, RoundingMode.HALF_UP));
+        vo.setUnmatchedCount(0);
+        return vo;
+    }
+
+    /** 上传图片转base64数据URI */
+    private String toDataUrl(MultipartFile image) {
+        try {
+            String contentType = image.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new BusinessException("仅支持图片文件");
+            }
+            byte[] data = image.getBytes();
+            // 防御: 过大的图片直接拒绝(前端正常压缩后在1MB以内)
+            if (data.length > 8 * 1024 * 1024) {
+                throw new BusinessException("图片过大，请重新拍摄");
+            }
+            return "data:" + contentType + ";base64,"
+                    + java.util.Base64.getEncoder().encodeToString(data);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new BusinessException("图片读取失败，请重试");
+        }
+    }
+
+    /** 解析视觉模型返回: {"foodName":"..","totalWeight":350,"ingredients":[...]} */
+    private PhotoParseResult parsePhotoContent(String content) {
+        try {
+            String t = content == null ? "" : content.trim();
+            if (t.startsWith("```")) {
+                t = t.substring(3);
+                if (t.toLowerCase().startsWith("json")) {
+                    t = t.substring(4);
+                }
+                t = t.replaceAll("```+$", "").trim();
+            }
+            int start = t.indexOf('{');
+            int end = t.lastIndexOf('}');
+            if (start < 0 || end <= start) {
+                throw new IOException("无JSON");
+            }
+            JsonNode root = objectMapper.readTree(t.substring(start, end + 1));
+            PhotoParseResult r = new PhotoParseResult();
+            r.dishName = root.path("foodName").asText("");
+            r.ingredients = new ArrayList<>();
+            JsonNode arr = root.path("ingredients");
+            if (arr.isArray()) {
+                for (JsonNode node : arr) {
+                    AiIngredientVO ing = new AiIngredientVO();
+                    ing.setFoodName(node.path("foodName").asText());
+                    ing.setWeight(node.path("weight").decimalValue());
+                    ing.setCalorie(num(node.path("calorie")));
+                    ing.setProtein(num(node.path("protein")));
+                    ing.setCarbohydrate(num(node.path("carbohydrate")));
+                    ing.setFat(num(node.path("fat")));
+                    if (StringUtils.hasText(ing.getFoodName()) && ing.getWeight() != null
+                            && ing.getWeight().compareTo(BigDecimal.ZERO) > 0) {
+                        r.ingredients.add(ing);
+                    }
+                }
+            }
+            return r;
+        } catch (IOException e) {
+            throw new BusinessException("AI返回数据解析失败，请重试");
+        }
+    }
+
+    /** 模拟模式下按本地库填充单项营养(与parseFood的mock分支一致) */
+    private void fillIngredientMock(AiIngredientVO ing) {
+        if (ing.getWeight() == null) {
+            ing.setWeight(BigDecimal.ZERO);
+        }
+        FoodNutrition food = calculator.match(ing.getFoodName());
+        if (food == null) {
+            ing.setMatched(false);
+            return;
+        }
+        BigDecimal factor = ing.getWeight().divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP);
+        ing.setFoodId(food.getId());
+        ing.setMatched(true);
+        ing.setCategory(food.getCategory());
+        ing.setCalorie(multiply(food.getCalorie(), factor));
+        ing.setProtein(multiply(food.getProtein(), factor));
+        ing.setCarbohydrate(multiply(food.getCarbohydrate(), factor));
+        ing.setFat(multiply(food.getFat(), factor));
+    }
+
+    /** 视觉模型返回的中间结构 */
+    private static class PhotoParseResult {
+        String dishName;
+        List<AiIngredientVO> ingredients;
     }
 
     /**

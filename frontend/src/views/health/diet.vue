@@ -11,6 +11,19 @@
             </div>
           </template>
 
+          <!-- 拍照打卡(手机端主入口) -->
+          <div class="photo-zone" :class="{ uploading: photoAnalyzing }"
+            v-loading="photoAnalyzing" element-loading-text="AI 识别中，请稍候…"
+            @click="triggerPhoto">
+            <el-icon :size="26"><Camera /></el-icon>
+            <div class="photo-title">拍照打卡</div>
+            <div class="photo-desc">拍下食物，AI 自动识别并计算热量</div>
+            <input ref="photoInputRef" type="file" accept="image/*" capture="environment"
+              hidden @change="handlePhotoChange" />
+          </div>
+
+          <div class="divider"><span>或输入菜名</span></div>
+
           <!-- AI智能识别(唯一模式) -->
           <div class="ai-mode">
             <el-alert type="info" :closable="false" class="ai-tip"
@@ -41,15 +54,15 @@
             <!-- 解析结果 -->
             <div v-if="aiResult" class="ai-result" v-loading="analyzing">
               <div class="ai-summary">
-                <b>{{ aiResult.foodName }}</b>
-                共 {{ aiResult.ingredients.length }} 项食材
-                <span class="ai-cal">合计 {{ aiResult.totalCalorie }} kcal</span>
-                <span class="ai-macro">P{{ aiResult.totalProtein }}g / C{{ aiResult.totalCarbohydrate }}g / F{{ aiResult.totalFat }}g</span>
+                <b>{{ displayResult.foodName }}</b>
+                共 {{ displayResult.ingredients.length }} 项食材
+                <span class="ai-cal">合计 {{ displayResult.totalCalorie }} kcal</span>
+                <span class="ai-macro">P{{ displayResult.totalProtein }}g / C{{ displayResult.totalCarbohydrate }}g / F{{ displayResult.totalFat }}g</span>
                 <el-tag v-if="aiResult.unmatchedCount > 0" type="warning" size="small">
                   {{ aiResult.unmatchedCount }}项未匹配
                 </el-tag>
               </div>
-              <el-table :data="aiResult.ingredients" size="small" max-height="240">
+              <el-table :data="displayResult.ingredients" size="small" max-height="240">
                 <el-table-column prop="foodName" label="食材" min-width="100" />
                 <el-table-column label="重量" width="75" align="center">
                   <template #default="{ row }">{{ row.weight }}g</template>
@@ -67,7 +80,7 @@
               </el-table>
               <el-button type="primary" style="width: 100%; margin-top: 10px" :loading="adding"
                 @click="handleAiAdd">
-                确认打卡（{{ aiResult.totalCalorie }} kcal）
+                确认打卡（{{ displayResult.totalCalorie }} kcal）
               </el-button>
             </div>
           </div>
@@ -181,7 +194,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { dailySummaryApi, dailyAdviceApi, dietSaveApi, dietDeleteApi, dietPageApi, aiAnalyzeFoodApi } from '@/api/health'
+import { dailySummaryApi, dailyAdviceApi, dietSaveApi, dietDeleteApi, dietPageApi, aiAnalyzeFoodApi, aiPhotoAnalyzeApi } from '@/api/health'
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -193,6 +206,112 @@ const adding = ref(false)
 const aiForm = reactive({ foodName: '', totalWeight: 300 })
 const analyzing = ref(false)
 const aiResult = ref(null)
+
+// 拍照识别: 基准重量与营养(AI识别结果), 用户调整重量时按比例换算
+const photoAnalyzing = ref(false)
+const photoInputRef = ref(null)
+const photoBase = ref(null)
+
+/**
+ * 触发拍照/选图(input被隐藏, 点击上传区代为触发)
+ */
+function triggerPhoto() {
+  if (photoAnalyzing.value || analyzing.value) return
+  photoInputRef.value?.click()
+}
+
+/**
+ * 选择照片后: 压缩 -> 上传识别 -> 回填菜名与基准重量
+ */
+async function handlePhotoChange(e) {
+  const file = e.target.files?.[0]
+  e.target.value = '' // 允许连续重选同一张照片
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.warning('图片过大，请重新拍摄')
+    return
+  }
+  photoAnalyzing.value = true
+  try {
+    const blob = await compressImage(file, 1280, 0.82)
+    const fd = new FormData()
+    fd.append('image', blob, 'photo.jpg')
+    const res = await aiPhotoAnalyzeApi(fd)
+    aiResult.value = res.data
+    const estWeight = res.data.ingredients.reduce((s, i) => s + (Number(i.weight) || 0), 0)
+    photoBase.value = {
+      weight: estWeight > 0 ? estWeight : 300,
+      calorie: Number(res.data.totalCalorie) || 0,
+      protein: Number(res.data.totalProtein) || 0,
+      carbohydrate: Number(res.data.totalCarbohydrate) || 0,
+      fat: Number(res.data.totalFat) || 0
+    }
+    aiForm.foodName = res.data.foodName
+    aiForm.totalWeight = Math.round(photoBase.value.weight)
+    ElMessage.success(`识别为「${res.data.foodName}」，可调整重量后打卡`)
+  } finally {
+    photoAnalyzing.value = false
+  }
+}
+
+/**
+ * canvas 压缩图片: 限制长边尺寸并转JPEG(手机原图2-5MB, 不压缩上传与识别都慢)
+ */
+function compressImage(file, maxEdge, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width >= height && width > maxEdge) {
+        height = Math.round((height * maxEdge) / width)
+        width = maxEdge
+      } else if (height > width && height > maxEdge) {
+        width = Math.round((width * maxEdge) / height)
+        height = maxEdge
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('压缩失败'))), 'image/jpeg', quality)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('图片读取失败'))
+    }
+    img.src = url
+  })
+}
+
+/**
+ * 展示/保存用的解析结果:
+ * 拍照模式下用户调整重量时, 营养按 新重量/基准重量 等比换算;
+ * 文本模式(无photoBase)直接返回原结果, 与原逻辑一致
+ */
+const displayResult = computed(() => {
+  const r = aiResult.value
+  if (!r || !photoBase.value || !aiForm.totalWeight || aiForm.totalWeight <= 0) return r
+  const factor = aiForm.totalWeight / photoBase.value.weight
+  if (!isFinite(factor) || factor <= 0) return r
+  return {
+    ...r,
+    totalCalorie: round1(r.totalCalorie * factor),
+    totalProtein: round1(r.totalProtein * factor),
+    totalCarbohydrate: round1(r.totalCarbohydrate * factor),
+    totalFat: round1(r.totalFat * factor)
+  }
+})
+
+/** 保留1位小数 */
+function round1(v) {
+  return Math.round((Number(v) || 0) * 10) / 10
+}
 
 /**
  * AI解析食物: 输入菜名+吃完重量, 后端AI解析食材组成按比例分配重量并本地计算营养
@@ -209,6 +328,7 @@ async function handleAiAnalyze() {
   }
   analyzing.value = true
   aiResult.value = null
+  photoBase.value = null // 文本模式: 清除拍照基准, 走后端已按重量缩放的结果
   try {
     const res = await aiAnalyzeFoodApi({ foodName: name, totalWeight: aiForm.totalWeight })
     aiResult.value = res.data
@@ -222,7 +342,7 @@ async function handleAiAnalyze() {
  * AI解析结果确认打卡: 仅打卡一条"菜名记录"(用户输入的菜名+总重量+总热量), 不逐条落食材
  */
 async function handleAiAdd() {
-  const r = aiResult.value
+  const r = displayResult.value
   if (!r || !r.totalCalorie) {
     ElMessage.warning('请先进行 AI 解析')
     return
@@ -244,6 +364,7 @@ async function handleAiAdd() {
     ElMessage.success(`已打卡「${r.foodName}」${aiForm.totalWeight}g${skipped ? `（${skipped} 项食材未匹配已从热量中剔除）` : ''}`)
     aiForm.foodName = ''
     aiResult.value = null
+    photoBase.value = null
     await refresh()
   } finally {
     adding.value = false
@@ -345,6 +466,61 @@ onMounted(refresh)
 /* AI识别模式 */
 .ai-tip {
   margin-bottom: 12px;
+}
+
+/* 拍照打卡入口 */
+.photo-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 20px 12px;
+  border: 1.5px dashed var(--brand-300);
+  border-radius: var(--radius-md);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.photo-zone:hover {
+  border-color: var(--brand-500);
+  background: var(--brand-100);
+}
+
+.photo-zone.uploading {
+  cursor: wait;
+}
+
+.photo-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.photo-desc {
+  font-size: 12px;
+  color: var(--ink-400);
+}
+
+/* 文本/拍照入口分隔线 */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  color: var(--ink-400);
+  font-size: 12px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line-1);
 }
 
 .ai-result {

@@ -29,16 +29,21 @@ public class AiClient {
     /** 模型名称 */
     private final String model;
 
+    /** 视觉模型名称(图片识别专用) */
+    private final String visionModel;
+
     /** 请求读超时(毫秒) */
     private final int readTimeoutMs;
 
     public AiClient(@Value("${ai.base-url}") String baseUrl,
                     @Value("${ai.api-key}") String apiKey,
                     @Value("${ai.model}") String model,
+                    @Value("${ai.vision-model:qwen-vl-plus}") String visionModel,
                     @Value("${ai.timeout-ms:60000}") int timeoutMs) {
         this.endpoint = baseUrl == null ? "" : baseUrl.trim().replaceAll("/+$", "");
         this.apiKey = apiKey;
         this.model = model;
+        this.visionModel = visionModel;
         this.readTimeoutMs = timeoutMs;
     }
 
@@ -47,6 +52,32 @@ public class AiClient {
      */
     public boolean isConfigured() {
         return apiKey != null && !apiKey.isBlank() && !"sk-xxx".equals(apiKey.trim());
+    }
+
+    /**
+     * 视觉对话接口: 传入图片(base64数据URI)与提示词，返回视觉模型文本回复
+     * 使用 ai.vision-model 配置的多模态模型(如 qwen-vl-plus)
+     *
+     * @param systemPrompt 系统提示词(角色与输出约束)
+     * @param userPrompt   用户提示词(具体任务内容)
+     * @param imageDataUrl 图片数据URI, 形如 data:image/jpeg;base64,xxxx
+     * @return 模型回复文本
+     */
+    public String chatVision(String systemPrompt, String userPrompt, String imageDataUrl) {
+        if (!isConfigured()) {
+            throw new BusinessException("AI服务未配置api-key，请在application.yml中修改ai.api-key");
+        }
+        // OpenAI兼容的多模态消息格式: content为数组, 文本与图片混排
+        Map<String, Object> body = Map.of(
+                "model", visionModel,
+                "temperature", 0.3,
+                "messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", List.of(
+                                Map.of("type", "text", "text", userPrompt),
+                                Map.of("type", "image_url",
+                                        "image_url", Map.of("url", imageDataUrl))))));
+        return doPost(endpoint + "/chat/completions", body);
     }
 
     /**
@@ -67,7 +98,13 @@ public class AiClient {
                 "messages", List.of(
                         Map.of("role", "system", "content", systemPrompt),
                         Map.of("role", "user", "content", userPrompt)));
-        String url = endpoint + "/chat/completions";
+        return doPost(endpoint + "/chat/completions", body);
+    }
+
+    /**
+     * 发送chat/completions请求并解析模型回复文本
+     */
+    private String doPost(String url, Map<String, Object> body) {
         String json = writeJson(body);
         HttpURLConnection conn = null;
         try {

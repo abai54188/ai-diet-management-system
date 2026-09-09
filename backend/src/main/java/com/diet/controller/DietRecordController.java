@@ -50,6 +50,15 @@ public class DietRecordController {
     }
 
     /**
+     * 拍照识别食物营养: 上传食物照片，视觉大模型识别菜品并估算重量后按相同口径解析营养
+     */
+    @org.springframework.web.bind.annotation.PostMapping("/ai-photo-analyze")
+    public Result<com.diet.dto.AiFoodParseVO> aiPhotoAnalyze(
+            @org.springframework.web.bind.annotation.RequestParam("image") org.springframework.web.multipart.MultipartFile image) {
+        return Result.success(aiFoodService.parseFoodPhoto(image));
+    }
+
+    /**
      * 分页查询当前用户饮食记录
      *
      * @param current    当前页码
